@@ -1,0 +1,25 @@
+{
+  "name": "rebridge",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "prettier": "^3.1.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@eslint/eslintrc": "^3",
+    "@eslint/js": "^9.31.0"
+  }
+}
