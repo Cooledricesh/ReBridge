@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                       String         @id @default(cuid())
+  email                    String         @unique
+  password_hash            String
+  is_registered_disability Boolean        @default(false)
+  created_at               DateTime       @default(now())
+  updated_at               DateTime       @updatedAt
+  user_saved_jobs          UserSavedJob[]
+
+  @@map("users")
+}
+
+model Job {
+  id                     String                   @id @default(cuid())
+  source                 String
+  external_id            String
+  title                  String
+  company                String?
+  location_json          Json?
+  salary_range           Json?
+  employment_type        String?
+  description            String?
+  is_disability_friendly Boolean                  @default(false)
+  crawled_at             DateTime
+  expires_at             DateTime?
+  raw_data               Json?
+  search_vector          Unsupported("tsvector")?
+  user_saved_jobs        UserSavedJob[]
+
+  @@unique([source, external_id])
+  @@index([company, title])
+  @@index([crawled_at(sort: Desc)])
+  @@map("jobs")
+}
+
+model UserSavedJob {
+  user_id  String
+  job_id   String
+  saved_at DateTime @default(now())
+  jobs     Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  users    User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([user_id, job_id])
+  @@map("user_saved_jobs")
+}
+
+model CrawlLog {
+  id            String    @id @default(cuid())
+  source        String
+  status        String
+  jobs_found    Int
+  jobs_new      Int
+  jobs_updated  Int
+  error_message String?
+  started_at    DateTime
+  completed_at  DateTime?
+
+  @@map("crawl_logs")
+}
