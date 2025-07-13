@@ -9,6 +9,8 @@ import {
 import { 
   WorkTogetherAdapter, 
   SaraminAdapter,
+  Work24Adapter,
+  JobKoreaAdapter,
   CrawlerAdapter
 } from '@rebridge/crawler-adapters';
 
@@ -29,6 +31,8 @@ export class CrawlerManager {
     // Initialize adapters
     this.adapters.set('workTogether', new WorkTogetherAdapter());
     this.adapters.set('saramin', new SaraminAdapter());
+    this.adapters.set('work24', new Work24Adapter());
+    this.adapters.set('jobkorea', new JobKoreaAdapter());
     
     console.log('Crawler adapters initialized');
   }
@@ -134,8 +138,8 @@ export class CrawlerManager {
         data: {
           status: 'success',
           jobsFound: rawJobs.length,
-          jobsNew,
-          jobsUpdated,
+          jobsNew: jobsNew,
+          jobsUpdated: jobsUpdated,
           completedAt: new Date(),
         },
       });
@@ -174,6 +178,13 @@ export class CrawlerManager {
 
   private async updateCache(): Promise<void> {
     try {
+      // Invalidate all jobs list cache keys
+      const listCacheKeys = await this.redis.keys('jobs:latest:*');
+      if (listCacheKeys.length > 0) {
+        await this.redis.del(...listCacheKeys);
+        console.log(`Invalidated ${listCacheKeys.length} list cache keys`);
+      }
+
       // Get latest 100 jobs
       const latestJobs = await prisma.job.findMany({
         orderBy: { crawledAt: 'desc' },
@@ -200,7 +211,35 @@ export class CrawlerManager {
         JSON.stringify(latestJobs)
       );
 
-      console.log(`Cached ${latestJobs.length} jobs in Redis`);
+      // Also cache the first page without filters for quick access
+      const firstPageJobs = await prisma.job.findMany({
+        orderBy: { crawledAt: 'desc' },
+        take: 20,
+        select: {
+          id: true,
+          title: true,
+          company: true,
+          locationJson: true,
+          salaryRange: true,
+          employmentType: true,
+          source: true,
+          externalId: true,
+          isDisabilityFriendly: true,
+          crawledAt: true,
+          expiresAt: true
+        }
+      });
+
+      const totalCount = await prisma.job.count();
+      
+      // Cache the first page
+      await this.redis.setex(
+        'jobs:latest:1::::latest',
+        3600,
+        JSON.stringify({ jobs: firstPageJobs, totalCount })
+      );
+
+      console.log(`Cached ${latestJobs.length} jobs in Redis and invalidated list caches`);
     } catch (error) {
       console.error('Error updating cache:', error);
     }

@@ -1,21 +1,47 @@
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import JobDetailClient from './client';
+import { prisma } from '@rebridge/database';
+import { redis } from '@/lib/redis';
+import { measurePerformance } from '@/lib/monitoring';
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+interface JobDetailPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata(props: JobDetailPageProps): Promise<Metadata> {
+  const params = await props.params;
+  
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/jobs/${params.id}`);
-    if (!response.ok) throw new Error('Failed to fetch job');
+    // Try to get from cache first
+    const cacheKey = `job:${params.id}`;
+    const cached = await redis().get(cacheKey);
+    const job = cached ? JSON.parse(cached as string) : await prisma.job.findUnique({
+      where: { id: params.id }
+    });
     
-    const job = await response.json();
+    if (!job) {
+      return {
+        title: '채용공고를 찾을 수 없습니다 | ReBridge',
+        description: '요청하신 채용공고를 찾을 수 없습니다.',
+      };
+    }
     
     return {
-      title: `${job.title} - ${job.company} | ReBridge`,
-      description: job.description?.substring(0, 160) || `${job.company}에서 ${job.title} 포지션을 채용 중입니다.`,
+      title: `${job.title} - ${job.company || '회사명 미정'} | ReBridge`,
+      description: job.description?.substring(0, 160) || `${job.company || '회사'}에서 ${job.title} 포지션을 채용 중입니다.`,
       openGraph: {
-        title: `${job.title} - ${job.company}`,
+        title: `${job.title} - ${job.company || '회사명 미정'}`,
         description: job.description?.substring(0, 160),
         type: 'article',
+        publishedTime: job.crawledAt,
+        modifiedTime: job.updatedAt,
       },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${job.title} - ${job.company || '회사명 미정'}`,
+        description: job.description?.substring(0, 160),
+      }
     };
   } catch {
     return {
@@ -25,6 +51,129 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   }
 }
 
-export default function JobDetailPage({ params }: { params: { id: string } }) {
-  return <JobDetailClient params={params} />;
+export default async function JobDetailPage(props: JobDetailPageProps) {
+  const params = await props.params;
+  const performance = measurePerformance('/jobs/[id]');
+  
+  try {
+    // Check cache first
+    const cacheKey = `job:${params.id}`;
+    const cached = await redis().get(cacheKey);
+    
+    let job;
+    if (cached) {
+      performance.recordCacheHit();
+      job = JSON.parse(cached as string);
+    } else {
+      // Fetch from database
+      job = await prisma.job.findUnique({
+        where: { id: params.id },
+        include: {
+          savedByUsers: {
+            select: {
+              userId: true
+            }
+          }
+        }
+      });
+      
+      if (!job) {
+        notFound();
+      }
+      
+      // Update view count
+      await prisma.job.update({
+        where: { id: params.id },
+        data: { viewCount: { increment: 1 } }
+      });
+      
+      // Cache for 1 hour
+      await redis().setex(cacheKey, 3600, JSON.stringify(job));
+      performance.recordCacheMiss();
+    }
+    
+    // Get related jobs
+    const relatedJobs = await prisma.job.findMany({
+      where: {
+        AND: [
+          { id: { not: params.id } },
+          {
+            OR: [
+              { company: job.company },
+              { employmentType: job.employmentType },
+              { location: job.location }
+            ]
+          }
+        ]
+      },
+      take: 5,
+      orderBy: { crawledAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        company: true,
+        location: true,
+        employmentType: true,
+        salaryMin: true,
+        salaryMax: true,
+        salaryInfo: true,
+        source: true,
+        expiresAt: true
+      }
+    });
+    
+    // Generate structured data for SEO
+    const structuredData = {
+      '@context': 'https://schema.org',
+      '@type': 'JobPosting',
+      title: job.title,
+      description: job.description,
+      identifier: {
+        '@type': 'PropertyValue',
+        name: 'JobID',
+        value: job.id,
+      },
+      datePosted: job.crawledAt,
+      validThrough: job.expiresAt,
+      employmentType: job.employmentType,
+      hiringOrganization: {
+        '@type': 'Organization',
+        name: job.company || '회사명 미정',
+      },
+      jobLocation: {
+        '@type': 'Place',
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: job.location,
+          addressRegion: job.locationDetail,
+          addressCountry: 'KR',
+        },
+      },
+      baseSalary: job.salaryMin && job.salaryMax ? {
+        '@type': 'MonetaryAmount',
+        currency: 'KRW',
+        value: {
+          '@type': 'QuantitativeValue',
+          minValue: job.salaryMin,
+          maxValue: job.salaryMax,
+          unitText: 'YEAR',
+        },
+      } : undefined,
+      experienceRequirements: job.experienceLevel,
+      educationRequirements: job.educationLevel,
+    };
+    
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        <JobDetailClient job={job} relatedJobs={relatedJobs} />
+      </>
+    );
+  } catch (error) {
+    console.error('Failed to fetch job:', error);
+    notFound();
+  }
 }

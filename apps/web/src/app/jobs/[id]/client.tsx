@@ -136,7 +136,7 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
                       {sourceNames[job.source]}
                     </Badge>
                     {job.isDisabilityFriendly && (
-                      <Badge variant="success">
+                      <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
                         <CheckCircle className="w-3 h-3 mr-1" />
                         장애인 우대
                       </Badge>

@@ -1,0 +1,181 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Vooster Design System Colors */
+    --midtone-blue: 200 22% 43%; /* #4F6D7A */
+    --soft-green: 88 20% 78%; /* #C6DABF */
+    --warm-gray: 0 0% 95%; /* #F2F2F2 */
+    
+    /* Base colors */
+    --background: 0 0% 100%;
+    --foreground: 200 22% 20%; /* Darker midtone blue for text */
+    
+    /* Card */
+    --card: 0 0% 100%;
+    --card-foreground: 200 22% 20%;
+    
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 22% 20%;
+    
+    /* Primary - using midtone blue */
+    --primary: 200 22% 43%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary - using soft green */
+    --secondary: 88 20% 78%;
+    --secondary-foreground: 200 22% 20%;
+    
+    /* Muted - using warm gray */
+    --muted: 0 0% 95%;
+    --muted-foreground: 200 15% 40%;
+    
+    /* Accent - lighter midtone blue */
+    --accent: 200 20% 90%;
+    --accent-foreground: 200 22% 43%;
+    
+    /* Destructive */
+    --destructive: 0 60% 55%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Border and input */
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 200 22% 43%;
+    
+    /* Border radius - 12px as per design system */
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Dark mode with softer contrasts */
+    --background: 200 20% 10%;
+    --foreground: 0 0% 95%;
+    
+    --card: 200 18% 13%;
+    --card-foreground: 0 0% 95%;
+    
+    --popover: 200 18% 13%;
+    --popover-foreground: 0 0% 95%;
+    
+    --primary: 200 22% 60%; /* Lighter midtone blue in dark mode */
+    --primary-foreground: 200 20% 10%;
+    
+    --secondary: 88 15% 25%; /* Darker soft green */
+    --secondary-foreground: 88 20% 85%;
+    
+    --muted: 200 15% 20%;
+    --muted-foreground: 200 10% 65%;
+    
+    --accent: 200 20% 25%;
+    --accent-foreground: 200 22% 75%;
+    
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 0 0% 95%;
+    
+    --border: 200 15% 18%;
+    --input: 200 15% 18%;
+    --ring: 200 22% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar styles */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.gray.400') transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 rounded-full;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-500;
+  }
+}
+
+/* Custom utility classes */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Vooster animations */
+  .animate-save {
+    animation: saveToDrawer 0.5s ease-out;
+  }
+  
+  @keyframes saveToDrawer {
+    0% {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: translateY(10px) scale(0.95);
+    }
+    100% {
+      transform: translateY(20px) scale(0.9);
+      opacity: 0;
+    }
+  }
+  
+  /* Soft transitions */
+  .transition-soft {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+}
+
+/* Font system */
+@layer base {
+  html {
+    font-family: 'Inter', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+  
+  /* Typography scale */
+  h1 {
+    @apply text-4xl font-semibold tracking-tight;
+  }
+  
+  h2 {
+    @apply text-3xl font-semibold tracking-tight;
+  }
+  
+  h3 {
+    @apply text-2xl font-medium;
+  }
+  
+  h4 {
+    @apply text-xl font-medium;
+  }
+  
+  p {
+    @apply leading-7;
+  }
+}

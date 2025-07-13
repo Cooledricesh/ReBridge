@@ -3,9 +3,10 @@ import { prisma } from '@rebridge/database';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params;
     const job = await prisma.job.findUnique({
       where: { id: params.id },
       select: {

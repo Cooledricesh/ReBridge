@@ -33,14 +33,11 @@ export async function POST(req: Request) {
       data: {
         email: validatedData.email,
         password_hash: hashedPassword,
-        name: validatedData.name,
         is_registered_disability: validatedData.isRegisteredDisability,
-        updated_at: new Date(),
       },
       select: {
         id: true,
         email: true,
-        name: true,
         is_registered_disability: true,
       }
     })

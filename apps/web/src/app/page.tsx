@@ -35,6 +35,8 @@ export default function HomePage() {
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState('latest');
   const [filterSource, setFilterSource] = useState('all');
+  const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
+  const [savingJobs, setSavingJobs] = useState<Set<string>>(new Set());
   const itemsPerPage = 20;
 
   useEffect(() => {
@@ -112,6 +114,20 @@ export default function HomePage() {
     fetchJobs(searchQuery);
   };
 
+  const handleSaveJob = async (jobId: string) => {
+    setSavingJobs(prev => new Set(prev).add(jobId));
+    
+    // Simulate save animation
+    setTimeout(() => {
+      setSavedJobs(prev => new Set(prev).add(jobId));
+      setSavingJobs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(jobId);
+        return newSet;
+      });
+    }, 500);
+  };
+
   const formatSalary = (salaryRange: any) => {
     if (!salaryRange) return '급여 협의';
     const { min, max, currency } = salaryRange;
@@ -185,7 +201,9 @@ export default function HomePage() {
               </Link>
             </div>
             <nav className="flex items-center gap-4">
-              <Button variant="ghost" size="sm">채용공고</Button>
+              <Link href="/jobs">
+                <Button variant="ghost" size="sm">채용공고</Button>
+              </Link>
               <Button variant="ghost" size="sm">기업정보</Button>
               <Button variant="ghost" size="sm">커뮤니티</Button>
               <div className="w-px h-6 bg-gray-200" />
@@ -196,24 +214,24 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section with Search */}
-      <section className="bg-gradient-to-b from-blue-50 to-white py-12">
+      <section className="bg-gradient-to-b from-secondary/20 to-background py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            <h2 className="text-3xl font-bold text-foreground mb-2">
               당신의 새로운 시작을 응원합니다
             </h2>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               정신장애인을 위한 맞춤형 채용정보를 한 곳에서 확인하세요
             </p>
           </div>
           
           <div className="max-w-3xl mx-auto">
             <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
               <Input
                 type="text"
                 placeholder="직무, 회사명, 지역을 검색해보세요"
-                className="pl-12 pr-32 h-14 text-base border-gray-200 rounded-lg shadow-sm"
+                className="pl-12 pr-32 h-14 text-base border-border rounded-lg shadow-sm transition-soft focus:shadow-md"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -226,13 +244,13 @@ export default function HomePage() {
             </form>
             
             <div className="flex items-center justify-center gap-2 mt-4">
-              <span className="text-sm text-gray-500">인기 검색어:</span>
+              <span className="text-sm text-muted-foreground">인기 검색어:</span>
               {['사무직', '개발자', '디자이너', '서울', '재택근무'].map((keyword) => (
                 <Button
                   key={keyword}
                   variant="ghost"
                   size="sm"
-                  className="text-sm text-blue-600 hover:text-blue-700"
+                  className="text-sm text-primary hover:text-primary/80 transition-soft"
                   onClick={() => {
                     setSearchQuery(keyword);
                     setCurrentPage(1);
@@ -248,7 +266,7 @@ export default function HomePage() {
       </section>
 
       {/* Filters and Sort */}
-      <section className="bg-white border-b sticky top-16 z-40">
+      <section className="bg-card border-b sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -323,13 +341,13 @@ export default function HomePage() {
           {loading ? (
             <div className="text-center py-12" role="status" aria-live="polite">
               <div className="inline-flex items-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" aria-hidden="true"></div>
-                <span className="ml-3 text-gray-600">채용공고를 불러오는 중...</span>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" aria-hidden="true"></div>
+                <span className="ml-3 text-muted-foreground">지금 좋은 공고를 찾는 중이에요...</span>
               </div>
             </div>
           ) : jobs.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">검색 결과가 없습니다.</p>
+              <p className="text-muted-foreground">검색 결과가 없습니다.</p>
             </div>
           ) : (
             jobs.map((job) => {
@@ -337,21 +355,21 @@ export default function HomePage() {
               
               return (
                 <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                  <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer">
+                  <Card className="p-6 hover:shadow-md transition-soft cursor-pointer hover:border-primary/20">
                     <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h3 className="text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors">
+                          <h3 className="text-lg font-semibold text-foreground hover:text-primary transition-soft">
                             {job.title}
                           </h3>
                           <div className="flex items-center gap-3 mt-1">
-                            <span className="text-gray-700 font-medium">{job.company}</span>
+                            <span className="text-foreground/80 font-medium">{job.company}</span>
                             <Badge variant={getSourceBadgeVariant(job.source)} className="text-xs">
                               {getSourceLabel(job.source)}
                             </Badge>
                             {job.isDisabilityFriendly && (
-                              <Badge variant="outline" className="text-xs border-green-500 text-green-700">
+                              <Badge variant="outline" className="text-xs border-secondary text-secondary-foreground">
                                 장애인채용
                               </Badge>
                             )}
@@ -360,18 +378,20 @@ export default function HomePage() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="ml-4"
+                          className={`ml-4 ${savingJobs.has(job.id) ? 'animate-save' : ''}`}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            // TODO: Implement bookmark functionality
+                            handleSaveJob(job.id);
                           }}
                         >
-                          <Bookmark className="h-5 w-5" />
+                          <Bookmark 
+                            className={`h-5 w-5 ${savedJobs.has(job.id) ? 'fill-primary' : ''}`} 
+                          />
                         </Button>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mt-3">
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-3">
                         <div className="flex items-center gap-1">
                           <MapPin className="h-4 w-4" />
                           <span>{job.locationJson?.address || '위치 미정'}</span>

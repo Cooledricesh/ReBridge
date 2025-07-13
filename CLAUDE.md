@@ -5,7 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ### Development
-- `npm run dev` - Start development server with Turbopack
+- `npm run dev` - Start all services (web + crawler)
+- `npm run dev:web` - Start only the web service
+- `npm run dev:crawler` - Start only the crawler service
 - `npm run build` - Build for production
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
@@ -83,11 +85,63 @@ src/
 - Define interfaces for complex types
 
 ## Important Notes
-- Package manager: npm (not yarn or pnpm)
+- Package manager: pnpm (monorepo with pnpm workspaces)
 - All text must support UTF-8 (Korean language)
 - Remote images allowed from all hostnames
 - ESLint configured with some TypeScript rules disabled
 - Development server runs on default port 3000
+- Database: PostgreSQL (via Docker) with Prisma ORM
+- Cache: Redis (via Docker)
+- Monorepo structure with Turborepo
+
+## Critical CSS Rules
+### ⚠️ @import MUST be at the top of CSS files
+- **Problem**: Placing `@import` inside `@layer` blocks or after other rules causes Next.js build to silently fail
+- **Symptom**: Server shows "Ready" but doesn't actually listen on port (ERR_CONNECTION_REFUSED)
+- **Solution**: Always place `@import` statements at the very beginning of CSS files, before any other rules
+
+Example of **CORRECT** structure in `globals.css`:
+```css
+@import url('https://fonts.googleapis.com/css2?family=...'); /* MUST be first */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Other styles here */
+}
+```
+
+## Known Issues and Solutions
+
+### 1. Next.js Dev Server Not Starting
+**Symptoms**: 
+- Shows "Ready in Xms" but localhost:3000 returns ERR_CONNECTION_REFUSED
+- No error messages in console
+- `netstat` shows port is not listening
+
+**Common Causes**:
+1. CSS parsing errors (especially @import placement)
+2. Missing required files (globals.css, layout.tsx)
+3. Invalid middleware configuration
+
+**Debugging Steps**:
+1. Check CSS files for @import placement
+2. Verify all required files exist in src/app/
+3. Remove any middleware.ts file if not needed
+4. Try running without Turbopack: `npx next dev` (without --turbopack)
+
+### 2. Merged App Directories
+- Original structure had two app directories: `apps/web/app/` and `apps/web/src/app/`
+- These were merged with `src/app/` as the final location
+- This is the correct Next.js 13+ App Router structure
+
+
+
+
+
+
 
 
 

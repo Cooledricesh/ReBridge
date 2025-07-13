@@ -13,6 +13,9 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'Noto Sans KR', 'system-ui', '-apple-system', 'sans-serif'],
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -46,6 +49,12 @@ const config = {
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
+        },
+        // Vooster design system colors
+        vooster: {
+          'midtone-blue': 'hsl(var(--midtone-blue))',
+          'soft-green': 'hsl(var(--soft-green))',
+          'warm-gray': 'hsl(var(--warm-gray))',
         },
       },
       borderRadius: {

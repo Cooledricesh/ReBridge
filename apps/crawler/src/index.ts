@@ -2,14 +2,30 @@ import cron from 'node-cron';
 import { Queue, Worker, QueueEvents } from 'bullmq';
 import Redis from 'ioredis';
 import { CrawlerManager } from './crawler-manager';
+import { CrawlerMonitoring } from './monitoring';
 import { CRAWL_CONFIG, REDIS_KEYS } from '@rebridge/shared';
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+});
 const crawlerManager = new CrawlerManager(redis);
+const crawlerMonitoring = new CrawlerMonitoring(redis);
+
+// Create separate Redis connections for BullMQ
+const queueConnection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+});
+
+const workerConnection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+});
 
 // BullMQ setup
 const crawlQueue = new Queue('crawl-jobs', {
-  connection: redis,
+  connection: queueConnection,
   defaultJobOptions: {
     attempts: CRAWL_CONFIG.MAX_RETRIES,
     backoff: {
@@ -22,7 +38,10 @@ const crawlQueue = new Queue('crawl-jobs', {
 });
 
 const queueEvents = new QueueEvents('crawl-jobs', {
-  connection: redis,
+  connection: new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+  }),
 });
 
 // Worker setup
@@ -42,7 +61,7 @@ const crawlWorker = new Worker(
     }
   },
   {
-    connection: redis,
+    connection: workerConnection,
     concurrency: CRAWL_CONFIG.MAX_CONCURRENT_REQUESTS,
   }
 );
@@ -63,15 +82,34 @@ async function scheduleCrawls() {
   // Add initial crawl jobs
   await crawlQueue.add('crawl-worktogether', { source: 'workTogether', page: 1 });
   await crawlQueue.add('crawl-saramin', { source: 'saramin', page: 1 });
+  await crawlQueue.add('crawl-work24', { source: 'work24', page: 1 });
+  await crawlQueue.add('crawl-jobkorea', { source: 'jobkorea', page: 1 });
   
   // Schedule recurring crawls
   cron.schedule(CRAWL_CONFIG.CRON_SCHEDULE, async () => {
     console.log('Running scheduled crawl...');
     await crawlQueue.add('crawl-worktogether', { source: 'workTogether', page: 1 });
     await crawlQueue.add('crawl-saramin', { source: 'saramin', page: 1 });
+    await crawlQueue.add('crawl-work24', { source: 'work24', page: 1 });
+    await crawlQueue.add('crawl-jobkorea', { source: 'jobkorea', page: 1 });
   });
   
   console.log(`Crawl jobs scheduled with cron: ${CRAWL_CONFIG.CRON_SCHEDULE}`);
+  
+  // Schedule monitoring checks every hour
+  cron.schedule('0 * * * *', async () => {
+    console.log('Running monitoring check...');
+    try {
+      const alerts = await crawlerMonitoring.checkAndAlert();
+      if (alerts.length > 0) {
+        console.log(`Found ${alerts.length} monitoring alerts`);
+      }
+    } catch (error) {
+      console.error('Monitoring check failed:', error);
+    }
+  });
+  
+  console.log('Monitoring scheduled to run every hour');
 }
 
 // Initialize and start
