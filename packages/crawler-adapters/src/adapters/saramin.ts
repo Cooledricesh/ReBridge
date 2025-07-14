@@ -35,31 +35,35 @@ export class SaraminAdapter extends BaseCrawlerAdapter {
 
       // Search for disability-friendly jobs
       const searchUrl = `${this.baseUrl}/zf_user/search?search_area=main&search_done=y&search_optional_item=n&searchType=search&searchword=%EC%9E%A5%EC%95%A0%EC%9D%B8&recruitPage=${page}`;
-      await browserPage.goto(searchUrl, { waitUntil: 'networkidle' });
+      await browserPage.goto(searchUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
-      // Wait for job listings to load
-      await browserPage.waitForSelector('.item_recruit', { timeout: 10000 });
+      // Wait for job listings to load with multiple possible selectors
+      await browserPage.waitForSelector('.item_recruit, .list_item, .job_item', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
       
       const html = await browserPage.content();
       const $ = cheerio.load(html);
 
-      // Extract job listings
-      $('.item_recruit').each((_, element) => {
+      // Extract job listings - use multiple possible selectors
+      $('.item_recruit, .list_item, .job_item').each((_, element) => {
         const $item = $(element);
-        const $titleLink = $item.find('.job_tit a');
+        const $titleLink = $item.find('.job_tit a, .title a, h2 a').first();
         const href = $titleLink.attr('href');
         
         if (href) {
           const externalId = this.extractJobId(href);
           const title = normalizeWhitespace($titleLink.attr('title') || $titleLink.text());
-          const company = normalizeWhitespace($item.find('.corp_name a').text());
+          const company = normalizeWhitespace(
+            $item.find('.corp_name a, .company_name a, .company a').first().text()
+          );
           const conditions = $item.find('.job_condition span');
           
           const location = normalizeWhitespace(conditions.eq(0).text());
           const experience = normalizeWhitespace(conditions.eq(1).text());
           const education = normalizeWhitespace(conditions.eq(2).text());
           const employmentType = normalizeWhitespace(conditions.eq(3).text());
-          const deadline = normalizeWhitespace($item.find('.job_date .date').text());
+          const deadline = normalizeWhitespace(
+            $item.find('.job_date .date, .date, .deadline').first().text()
+          );
 
           results.push({
             source: this.source,
@@ -107,15 +111,31 @@ export class SaraminAdapter extends BaseCrawlerAdapter {
       const page = await context.newPage();
 
       const detailUrl = `${this.baseUrl}/zf_user/jobs/relay/view?rec_idx=${id}`;
-      await page.goto(detailUrl, { waitUntil: 'networkidle' });
+      await page.goto(detailUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
       const html = await page.content();
       const $ = cheerio.load(html);
 
-      // Extract detailed information
-      const title = normalizeWhitespace($('.wrap_jv_header .jv_header a').text());
-      const company = normalizeWhitespace($('.wrap_jv_header .jv_company a').text());
-      const description = normalizeWhitespace($('.cont.box').text());
+      // Wait for detail content to load
+      await page.waitForSelector('.wrap_jv_header, .job_header, .detail_header', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
+      
+      // Extract detailed information - use multiple possible selectors
+      const title = normalizeWhitespace(
+        $('.wrap_jv_header .jv_header a').text() ||
+        $('.job_header h1').text() ||
+        $('.detail_header .title').text() ||
+        $('h1.title').first().text()
+      );
+      const company = normalizeWhitespace(
+        $('.wrap_jv_header .jv_company a').text() ||
+        $('.company_name').text() ||
+        $('.corp_name').text()
+      );
+      const description = normalizeWhitespace(
+        $('.cont.box').text() ||
+        $('.job_description').text() ||
+        $('.detail_content').text()
+      );
       
       // Extract requirements and qualifications
       const requirements: string[] = [];

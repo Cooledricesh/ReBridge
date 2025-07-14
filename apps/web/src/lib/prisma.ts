@@ -1,9 +1,2 @@
-import { PrismaClient } from '@prisma/client'
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient()
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// database 패키지에서 이미 설정된 prisma 인스턴스를 사용
+export { prisma } from '@rebridge/database'

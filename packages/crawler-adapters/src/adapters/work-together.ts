@@ -36,26 +36,38 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
 
       // Navigate to job list page
       const listUrl = `${this.baseUrl}/empInfo/empInfoSrch/list/retriveWorkRegionEmpIntroList.do?pageIndex=${page}`;
-      await browserPage.goto(listUrl, { waitUntil: 'networkidle' });
+      await browserPage.goto(listUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
-      // Wait for content to load
-      await browserPage.waitForSelector('.board_list', { timeout: 10000 });
+      // Wait for content to load with increased timeout
+      await browserPage.waitForSelector('.board_list, .list_table, .job_list', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
       
       const html = await browserPage.content();
       const $ = cheerio.load(html);
 
-      // Extract job listings
-      $('.board_list tbody tr').each((_, element) => {
+      // Extract job listings - use multiple possible selectors
+      $('.board_list tbody tr, .list_table tbody tr, .job_list tbody tr').each((_, element) => {
         const $row = $(element);
-        const titleLink = $row.find('td.tit a');
+        // Skip empty rows or header rows
+        if ($row.find('td').length === 0 || $row.hasClass('no-data')) {
+          return;
+        }
+        const titleLink = $row.find('td.tit a, td.title a, td a.link').first();
         const href = titleLink.attr('href');
         
         if (href) {
           const externalId = this.extractJobId(href);
           const title = normalizeWhitespace(titleLink.text());
-          const company = normalizeWhitespace($row.find('td:nth-child(2)').text());
-          const location = normalizeWhitespace($row.find('td:nth-child(3)').text());
-          const deadline = normalizeWhitespace($row.find('td:nth-child(5)').text());
+          // Use more robust selectors for table columns
+          const $tds = $row.find('td');
+          const company = normalizeWhitespace(
+            $tds.eq(1).text() || $row.find('.company').text()
+          );
+          const location = normalizeWhitespace(
+            $tds.eq(2).text() || $row.find('.location').text()
+          );
+          const deadline = normalizeWhitespace(
+            $tds.eq(4).text() || $tds.eq(3).text() || $row.find('.deadline').text()
+          );
 
           results.push({
             source: this.source,
@@ -100,19 +112,35 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
       const page = await context.newPage();
 
       const detailUrl = `${this.baseUrl}/empInfo/empInfoSrch/detail/empDetailAuthView.do?searchEpSeq=${id}`;
-      await page.goto(detailUrl, { waitUntil: 'networkidle' });
+      await page.goto(detailUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
       const html = await page.content();
       const $ = cheerio.load(html);
 
-      // Extract detailed information
-      const title = normalizeWhitespace($('.view_top h3').text());
-      const company = normalizeWhitespace($('.company_name').text());
-      const description = normalizeWhitespace($('.view_content').text());
+      // Wait for detail content to load
+      await page.waitForSelector('.view_top, .detail_top, .content_wrap', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
       
-      // Extract structured data from detail table
+      // Extract detailed information - use multiple possible selectors
+      const title = normalizeWhitespace(
+        $('.view_top h3').text() ||
+        $('.detail_top h2').text() ||
+        $('.title_area h3').text() ||
+        $('h3.title').first().text()
+      );
+      const company = normalizeWhitespace(
+        $('.company_name').text() ||
+        $('.corp_name').text() ||
+        $('.company').first().text()
+      );
+      const description = normalizeWhitespace(
+        $('.view_content').text() ||
+        $('.detail_content').text() ||
+        $('.job_content').text()
+      );
+      
+      // Extract structured data from detail table - use multiple possible selectors
       const details: Record<string, string> = {};
-      $('.view_table tr').each((_, row) => {
+      $('.view_table tr, .detail_table tr, .info_table tr, table.table_view tr').each((_, row) => {
         const $row = $(row);
         const label = normalizeWhitespace($row.find('th').text());
         const value = normalizeWhitespace($row.find('td').text());

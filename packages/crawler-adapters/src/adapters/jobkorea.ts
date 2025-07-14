@@ -37,26 +37,32 @@ export class JobKoreaAdapter extends BaseCrawlerAdapter {
       // Navigate to job list page with disability-friendly filter
       // Using search keyword "장애인" to filter disability-friendly jobs
       const listUrl = `${this.baseUrl}/Search/?stext=%EC%9E%A5%EC%95%A0%EC%9D%B8&Page_No=${page}`;
-      await browserPage.goto(listUrl, { waitUntil: 'networkidle' });
+      await browserPage.goto(listUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
-      // Wait for content to load
-      await browserPage.waitForSelector('.list-post', { timeout: 10000 });
+      // Wait for content to load with increased timeout
+      await browserPage.waitForSelector('.list-post, .recruit-list, .job-list', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
       
       const html = await browserPage.content();
       const $ = cheerio.load(html);
 
-      // Extract job listings
-      $('.list-post .post').each((_, element) => {
+      // Extract job listings - use multiple possible selectors
+      $('.list-post .post, .recruit-list .list-item, .job-list .item').each((_, element) => {
         const $item = $(element);
-        const titleLink = $item.find('.title a');
+        const titleLink = $item.find('.title a, .job-title a, a.title').first();
         const href = titleLink.attr('href');
         
         if (href) {
           const externalId = this.extractJobId(href);
           const title = normalizeWhitespace(titleLink.attr('title') || titleLink.text());
-          const company = normalizeWhitespace($item.find('.name').text());
-          const location = normalizeWhitespace($item.find('.loc').text());
-          const deadline = normalizeWhitespace($item.find('.date').text());
+          const company = normalizeWhitespace(
+            $item.find('.name, .company, .corp-name').first().text()
+          );
+          const location = normalizeWhitespace(
+            $item.find('.loc, .location, .area').first().text()
+          );
+          const deadline = normalizeWhitespace(
+            $item.find('.date, .deadline, .d-day').first().text()
+          );
 
           results.push({
             source: this.source,
@@ -101,21 +107,37 @@ export class JobKoreaAdapter extends BaseCrawlerAdapter {
       const page = await context.newPage();
 
       const detailUrl = `${this.baseUrl}/Recruit/GI_Read/${id}`;
-      await page.goto(detailUrl, { waitUntil: 'networkidle' });
+      await page.goto(detailUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
       const html = await page.content();
       const $ = cheerio.load(html);
 
-      // Extract detailed information
-      const title = normalizeWhitespace($('.tit-area .tit').text());
-      const company = normalizeWhitespace($('.co-name').text());
-      const description = normalizeWhitespace($('.cont').text());
+      // Wait for detail content to load
+      await page.waitForSelector('.tit-area, .detail-header, .job-header', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
+      
+      // Extract detailed information - use multiple possible selectors
+      const title = normalizeWhitespace(
+        $('.tit-area .tit').text() ||
+        $('.detail-header h2').text() ||
+        $('.job-header .title').text() ||
+        $('h2.title').first().text()
+      );
+      const company = normalizeWhitespace(
+        $('.co-name').text() ||
+        $('.company-name').text() ||
+        $('.corp-info .name').text()
+      );
+      const description = normalizeWhitespace(
+        $('.cont').text() ||
+        $('.detail-content').text() ||
+        $('.job-description').text()
+      );
       
       // Extract structured data from info sections
       const details: Record<string, string> = {};
       
-      // Parse job information table
-      $('.tbRow tr').each((_, row) => {
+      // Parse job information table - use multiple possible selectors
+      $('.tbRow tr, .info-table tr, .detail-table tr, table.table-info tr').each((_, row) => {
         const $row = $(row);
         $row.find('th').each((index, th) => {
           const label = normalizeWhitespace($(th).text());

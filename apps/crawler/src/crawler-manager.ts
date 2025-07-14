@@ -45,6 +45,7 @@ export class CrawlerManager {
 
     const startTime = Date.now();
     let crawlLogId: string | null = null;
+    let lastError: Error | null = null;
 
     try {
       // Create crawl log
@@ -60,10 +61,28 @@ export class CrawlerManager {
       });
       crawlLogId = crawlLog.id;
 
-      // Crawl jobs
+      // Crawl jobs with retry logic
       console.log(`Starting crawl for ${source}, page ${page}...`);
-      const rawJobs = await adapter.crawl(page);
-      console.log(`Found ${rawJobs.length} jobs from ${source}`);
+      let rawJobs: RawJobData[] = [];
+      
+      for (let attempt = 0; attempt <= CRAWL_CONFIG.MAX_RETRIES; attempt++) {
+        try {
+          rawJobs = await adapter.crawl(page);
+          console.log(`Found ${rawJobs.length} jobs from ${source} on attempt ${attempt + 1}`);
+          break; // Success, exit retry loop
+        } catch (error) {
+          lastError = error as Error;
+          console.error(`Crawl attempt ${attempt + 1} failed for ${source}:`, error);
+          
+          if (attempt < CRAWL_CONFIG.MAX_RETRIES) {
+            const delay = CRAWL_CONFIG.RETRY_BACKOFF[attempt] || 5000;
+            console.log(`Retrying in ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            throw error; // All retries exhausted
+          }
+        }
+      }
 
       // Process and save jobs
       let jobsNew = 0;
@@ -158,7 +177,8 @@ export class CrawlerManager {
       return result;
 
     } catch (error) {
-      console.error(`Crawl error for ${source}:`, error);
+      const finalError = error instanceof Error ? error : new Error('Unknown error');
+      console.error(`Crawl error for ${source}:`, finalError);
 
       // Update crawl log with error
       if (crawlLogId) {
@@ -166,13 +186,19 @@ export class CrawlerManager {
           where: { id: crawlLogId },
           data: {
             status: 'failed',
-            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            errorMessage: finalError.message,
             completedAt: new Date(),
           },
         });
       }
 
-      throw error;
+      return {
+        source,
+        jobsFound: 0,
+        jobsNew: 0,
+        jobsUpdated: 0,
+        error: finalError.message,
+      };
     }
   }
 

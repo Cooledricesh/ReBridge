@@ -141,21 +141,15 @@ export default async function JobsPage(props: JobsPageProps) {
         id: true,
         title: true,
         company: true,
-        location: true,
-        locationDetail: true,
-        salaryMin: true,
-        salaryMax: true,
-        salaryInfo: true,
+        locationJson: true,
+        salaryRange: true,
         employmentType: true,
         source: true,
         externalId: true,
-        externalUrl: true,
         isDisabilityFriendly: true,
-        experienceLevel: true,
-        educationLevel: true,
         crawledAt: true,
         expiresAt: true,
-        viewCount: true
+        description: true
       }
     });
 

@@ -1,48 +1,43 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions", "fullTextSearch"]
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  extensions = [pgcrypto(map: "pgcrypto"), pg_trgm(map: "pg_trgm")]
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm, pgcrypto]
 }
 
 model User {
-  id                      String         @id @default(uuid())
-  email                   String         @unique
-  passwordHash            String         @map("password_hash")
-  isRegisteredDisability  Boolean        @default(false) @map("is_registered_disability")
-  createdAt               DateTime       @default(now()) @map("created_at")
-  updatedAt               DateTime       @updatedAt @map("updated_at")
-  
-  savedJobs               UserSavedJob[]
-  
+  id                     String         @id @default(uuid())
+  email                  String         @unique
+  passwordHash           String         @map("password_hash")
+  isRegisteredDisability Boolean        @default(false) @map("is_registered_disability")
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
+  savedJobs              UserSavedJob[]
+
   @@map("users")
 }
 
 model Job {
-  id                     String         @id @default(uuid())
-  source                 String
-  externalId             String         @map("external_id")
-  title                  String         @db.Text
-  company                String?
-  locationJson           Json?          @map("location_json")
-  salaryRange            Json?          @map("salary_range")
-  employmentType         String?        @map("employment_type")
-  description            String?        @db.Text
-  isDisabilityFriendly   Boolean        @default(false) @map("is_disability_friendly")
-  crawledAt              DateTime       @map("crawled_at")
-  expiresAt              DateTime?      @map("expires_at")
-  rawData                Json?          @map("raw_data")
-  searchVector           Unsupported("tsvector")? @map("search_vector")
-  
-  savedByUsers           UserSavedJob[]
-  
+  id                   String                   @id @default(uuid())
+  source               String
+  externalId           String                   @map("external_id")
+  title                String
+  company              String?
+  locationJson         Json?                    @map("location_json")
+  salaryRange          Json?                    @map("salary_range")
+  employmentType       String?                  @map("employment_type")
+  description          String?
+  isDisabilityFriendly Boolean                  @default(false) @map("is_disability_friendly")
+  crawledAt            DateTime                 @map("crawled_at")
+  expiresAt            DateTime?                @map("expires_at")
+  rawData              Json?                    @map("raw_data")
+  searchVector         Unsupported("tsvector")? @map("search_vector")
+  savedByUsers         UserSavedJob[]
+
   @@unique([source, externalId])
   @@index([crawledAt(sort: Desc)])
   @@index([company, title])
@@ -50,27 +45,26 @@ model Job {
 }
 
 model UserSavedJob {
-  userId    String   @map("user_id")
-  jobId     String   @map("job_id")
-  savedAt   DateTime @default(now()) @map("saved_at")
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  
+  userId  String   @map("user_id")
+  jobId   String   @map("job_id")
+  savedAt DateTime @default(now()) @map("saved_at")
+  job     Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@id([userId, jobId])
   @@map("user_saved_jobs")
 }
 
 model CrawlLog {
-  id            String    @id @default(uuid())
-  source        String
-  status        String
-  jobsFound     Int       @map("jobs_found")
-  jobsNew       Int       @map("jobs_new")
-  jobsUpdated   Int       @map("jobs_updated")
-  errorMessage  String?   @map("error_message") @db.Text
-  startedAt     DateTime  @map("started_at")
-  completedAt   DateTime? @map("completed_at")
-  
+  id           String    @id @default(uuid())
+  source       String
+  status       String
+  jobsFound    Int       @map("jobs_found")
+  jobsNew      Int       @map("jobs_new")
+  jobsUpdated  Int       @map("jobs_updated")
+  errorMessage String?   @map("error_message")
+  startedAt    DateTime  @map("started_at")
+  completedAt  DateTime? @map("completed_at")
+
   @@map("crawl_logs")
 }

@@ -7,6 +7,13 @@ export const CRAWL_CONFIG = {
     jobkorea: 4,
   },
   
+  // Timeout configuration (milliseconds)
+  TIMEOUT: {
+    PAGE_LOAD: 30000, // 30 seconds for page load
+    SELECTOR: 20000,  // 20 seconds for selector wait
+    NAVIGATION: 30000, // 30 seconds for navigation
+  },
+  
   // Retry configuration
   MAX_RETRIES: 3,
   RETRY_BACKOFF: [1000, 2000, 4000], // milliseconds

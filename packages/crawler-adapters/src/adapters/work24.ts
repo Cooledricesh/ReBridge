@@ -36,16 +36,16 @@ export class Work24Adapter extends BaseCrawlerAdapter {
 
       // Navigate to job list page with disability filter
       const listUrl = `${this.baseUrl}/wk/a/c/CA0101.do?srchType=12&srchKeyword=&rowsPerPage=20&pageNo=${page}&srchEmplTypList=&srchWorkAreaList=&srchMjrNmList=&srchJobKindList=&srchWageType=&srchWageMin=&srchWageMax=&srchWorkDayTyp=&srchDisablGbn=Y`;
-      await browserPage.goto(listUrl, { waitUntil: 'networkidle' });
+      await browserPage.goto(listUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
-      // Wait for content to load
-      await browserPage.waitForSelector('.tbl-type01', { timeout: 10000 });
+      // Wait for content to load with increased timeout
+      await browserPage.waitForSelector('.tbl-type01', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
       
       const html = await browserPage.content();
       const $ = cheerio.load(html);
 
-      // Extract job listings
-      $('.tbl-type01 tbody tr').each((_, element) => {
+      // Extract job listings - use more specific selector
+      $('.tbl-type01 tbody tr:not(.no-data)').each((_, element) => {
         const $row = $(element);
         const titleLink = $row.find('.al-l a');
         const onclick = titleLink.attr('onclick');
@@ -100,19 +100,35 @@ export class Work24Adapter extends BaseCrawlerAdapter {
       const page = await context.newPage();
 
       const detailUrl = `${this.baseUrl}/wk/a/c/CA0301.do?jobId=${id}`;
-      await page.goto(detailUrl, { waitUntil: 'networkidle' });
+      await page.goto(detailUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
       const html = await page.content();
       const $ = cheerio.load(html);
 
-      // Extract detailed information
-      const title = normalizeWhitespace($('.job-detail-top h3').text());
-      const company = normalizeWhitespace($('.company-info .name').text());
-      const description = normalizeWhitespace($('.job-detail-content').text());
+      // Wait for detail content to load
+      await page.waitForSelector('.content, .detail-content, .job-content', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
       
-      // Extract structured data from detail sections
+      // Extract detailed information - use multiple possible selectors
+      const title = normalizeWhitespace(
+        $('.job-detail-top h3').text() || 
+        $('.detail-title').text() || 
+        $('h2.title').text() ||
+        $('h3.title').first().text()
+      );
+      const company = normalizeWhitespace(
+        $('.company-info .name').text() || 
+        $('.company-name').text() ||
+        $('.corp-name').text()
+      );
+      const description = normalizeWhitespace(
+        $('.job-detail-content').text() || 
+        $('.detail-content').text() ||
+        $('.job-content').text()
+      );
+      
+      // Extract structured data from detail sections - use multiple possible selectors
       const details: Record<string, string> = {};
-      $('.job-info-table tr').each((_, row) => {
+      $('.job-info-table tr, .detail-table tr, .info-table tr, table.tbl-type01 tr').each((_, row) => {
         const $row = $(row);
         const label = normalizeWhitespace($row.find('th').text());
         const value = normalizeWhitespace($row.find('td').text());

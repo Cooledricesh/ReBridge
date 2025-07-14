@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { withRateLimit } from "@/lib/rate-limit"
 
 const registerSchema = z.object({
   email: z.string().email("올바른 이메일 형식이 아닙니다"),
@@ -10,7 +11,7 @@ const registerSchema = z.object({
   isRegisteredDisability: z.boolean().optional().default(false),
 })
 
-export async function POST(req: Request) {
+async function registerHandler(req: Request) {
   try {
     const body = await req.json()
     
@@ -32,13 +33,13 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: {
         email: validatedData.email,
-        password_hash: hashedPassword,
-        is_registered_disability: validatedData.isRegisteredDisability,
+        passwordHash: hashedPassword,
+        isRegisteredDisability: validatedData.isRegisteredDisability,
       },
       select: {
         id: true,
         email: true,
-        is_registered_disability: true,
+        isRegisteredDisability: true,
       }
     })
     
@@ -61,3 +62,5 @@ export async function POST(req: Request) {
     )
   }
 }
+
+export const POST = withRateLimit(registerHandler, 'auth')

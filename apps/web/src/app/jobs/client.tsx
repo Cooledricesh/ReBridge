@@ -13,21 +13,15 @@ interface Job {
   id: string;
   title: string;
   company: string | null;
-  location: string | null;
-  locationDetail: string | null;
-  salaryMin: number | null;
-  salaryMax: number | null;
-  salaryInfo: string | null;
+  locationJson: any;
+  salaryRange: any;
   employmentType: string | null;
   source: string;
   externalId: string;
-  externalUrl: string | null;
   isDisabilityFriendly: boolean;
-  experienceLevel: string | null;
-  educationLevel: string | null;
   crawledAt: Date | string;
   expiresAt: Date | string | null;
-  viewCount: number;
+  description: string | null;
 }
 
 interface JobsListClientProps {
@@ -106,8 +100,10 @@ export function JobsListClient({ initialJobs, totalCount, currentPage, searchPar
     return { text: `D-${daysLeft}`, color: 'text-gray-600' };
   };
 
-  const formatSalary = (min: number | null, max: number | null, info: string | null) => {
-    if (info) return info;
+  const formatSalary = (salaryRange: any) => {
+    if (!salaryRange) return '급여 협의';
+    const { min, max, text } = salaryRange;
+    if (text) return text;
     if (min && max) return `${(min / 10000).toFixed(0)}만원 ~ ${(max / 10000).toFixed(0)}만원`;
     if (min) return `${(min / 10000).toFixed(0)}만원 이상`;
     if (max) return `${(max / 10000).toFixed(0)}만원 이하`;
@@ -307,10 +303,10 @@ export function JobsListClient({ initialJobs, totalCount, currentPage, searchPar
                             <span>{job.company}</span>
                           </div>
                         )}
-                        {(job.location || job.locationDetail) && (
+                        {job.locationJson && (
                           <div className="flex items-center gap-1">
                             <MapPin className="w-4 h-4" aria-hidden="true" />
-                            <span>{job.location} {job.locationDetail}</span>
+                            <span>{job.locationJson.address || job.locationJson.region || '위치 미정'}</span>
                           </div>
                         )}
                         {job.employmentType && (
@@ -323,18 +319,8 @@ export function JobsListClient({ initialJobs, totalCount, currentPage, searchPar
 
                       <div className="flex items-center gap-4 text-sm">
                         <span className="text-gray-700 dark:text-gray-300 font-medium">
-                          {formatSalary(job.salaryMin, job.salaryMax, job.salaryInfo)}
+                          {formatSalary(job.salaryRange)}
                         </span>
-                        {job.experienceLevel && (
-                          <span className="text-gray-600 dark:text-gray-400">
-                            경력 {job.experienceLevel}
-                          </span>
-                        )}
-                        {job.educationLevel && (
-                          <span className="text-gray-600 dark:text-gray-400">
-                            {job.educationLevel}
-                          </span>
-                        )}
                       </div>
                     </div>
 

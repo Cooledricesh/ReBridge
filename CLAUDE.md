@@ -125,17 +125,30 @@ Example of **CORRECT** structure in `globals.css`:
 1. CSS parsing errors (especially @import placement)
 2. Missing required files (globals.css, layout.tsx)
 3. Invalid middleware configuration
+4. **Prisma Client not generated** (most common in monorepo)
 
 **Debugging Steps**:
-1. Check CSS files for @import placement
-2. Verify all required files exist in src/app/
-3. Remove any middleware.ts file if not needed
-4. Try running without Turbopack: `npx next dev` (without --turbopack)
+1. **Run `npx prisma generate` in apps/web directory** - This is often the solution
+2. Check CSS files for @import placement
+3. Verify all required files exist in src/app/
+4. Remove any middleware.ts file if not needed
+5. Try running without Turbopack: `npx next dev` (without --turbopack)
+
+**Prisma-specific Solution (2025-07-13)**:
+- Issue: Monorepo structure can cause Prisma client generation to fail silently
+- Solution: 
+  ```bash
+  cd apps/web
+  npx prisma generate
+  ```
+- Prevention: Consider adding to postinstall script in package.json
 
 ### 2. Merged App Directories
 - Original structure had two app directories: `apps/web/app/` and `apps/web/src/app/`
 - These were merged with `src/app/` as the final location
 - This is the correct Next.js 13+ App Router structure
+
+
 
 
 

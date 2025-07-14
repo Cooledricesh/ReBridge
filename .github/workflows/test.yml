@@ -1,0 +1,105 @@
+name: Test & Deploy
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/rebridge_test
+  NEXTAUTH_URL: http://localhost:3000
+  NEXTAUTH_SECRET: test-secret
+  REDIS_URL: redis://localhost:6379
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: rebridge_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Generate Prisma Client
+        run: |
+          cd packages/database
+          pnpm prisma generate
+          pnpm prisma db push
+      
+      - name: Run linter
+        run: pnpm lint
+      
+      - name: Run type check
+        run: pnpm typecheck
+      
+      - name: Run unit tests
+        run: pnpm test:unit
+      
+      - name: Build
+        run: pnpm build
+      
+      - name: Install Playwright browsers
+        run: |
+          cd apps/web
+          pnpm exec playwright install chromium
+      
+      - name: Run E2E tests
+        run: pnpm test:e2e
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: |
+            test-results/
+            coverage/
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to production
+        run: |
+          echo "Deploy steps would go here"
+          # Example: Deploy to Vercel, Railway, etc.

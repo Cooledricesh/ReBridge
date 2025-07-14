@@ -54,6 +54,15 @@ const crawlWorker = new Worker(
     try {
       const result = await crawlerManager.crawlSource(source, page);
       console.log(`Crawl completed for ${source}: ${result.jobsFound} jobs found, ${result.jobsNew} new`);
+      
+      // Check for immediate alerts after crawl
+      if (result.error) {
+        const alerts = await crawlerMonitoring.checkAndAlert();
+        if (alerts.length > 0) {
+          console.warn(`⚠️ Monitoring alerts detected after ${source} crawl failure`);
+        }
+      }
+      
       return result;
     } catch (error) {
       console.error(`Crawl failed for ${source}:`, error);

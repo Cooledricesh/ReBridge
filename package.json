@@ -7,12 +7,20 @@
     "dev": "turbo dev",
     "dev:web": "turbo dev --filter=@rebridge/web",
     "dev:crawler": "turbo dev --filter=@rebridge/crawler",
+    "start": "turbo run start --filter=@rebridge/web",
+    "start:all": "turbo run start",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "clean": "turbo clean && rm -rf node_modules"
+    "clean": "turbo clean && rm -rf node_modules",
+    "test": "turbo test",
+    "test:unit": "turbo test:unit",
+    "test:e2e": "turbo test:e2e",
+    "typecheck": "turbo typecheck",
+    "check-env": "node check-env.js"
   },
   "devDependencies": {
     "prettier": "^3.1.0",
+    "tsx": "^4.7.0",
     "turbo": "^2.0.0",
     "typescript": "^5"
   },
@@ -22,6 +30,9 @@
   },
   "dependencies": {
     "@eslint/eslintrc": "^3",
-    "@eslint/js": "^9.31.0"
+    "@eslint/js": "^9.31.0",
+    "@types/nodemailer": "^6.4.17",
+    "bullmq": "^5.0.0",
+    "nodemailer": "^7.0.5"
   }
 }
