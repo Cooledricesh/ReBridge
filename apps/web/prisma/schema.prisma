@@ -10,11 +10,11 @@ datasource db {
 model User {
   id                       String         @id @default(cuid())
   email                    String         @unique
-  password_hash            String
-  is_registered_disability Boolean        @default(false)
-  created_at               DateTime       @default(now())
-  updated_at               DateTime       @updatedAt
-  user_saved_jobs          UserSavedJob[]
+  passwordHash             String         @map("password_hash")
+  isRegisteredDisability   Boolean        @default(false) @map("is_registered_disability")
+  createdAt                DateTime       @default(now()) @map("created_at")
+  updatedAt                DateTime       @updatedAt @map("updated_at")
+  userSavedJobs            UserSavedJob[]
 
   @@map("users")
 }
@@ -22,34 +22,34 @@ model User {
 model Job {
   id                     String                   @id @default(cuid())
   source                 String
-  external_id            String
+  externalId             String         @map("external_id")
   title                  String
   company                String?
-  location_json          Json?
-  salary_range           Json?
-  employment_type        String?
+  locationJson           Json?          @map("location_json")
+  salaryRange            Json?          @map("salary_range")
+  employmentType         String?        @map("employment_type")
   description            String?
-  is_disability_friendly Boolean                  @default(false)
-  crawled_at             DateTime
-  expires_at             DateTime?
-  raw_data               Json?
-  search_vector          Unsupported("tsvector")?
-  user_saved_jobs        UserSavedJob[]
+  isDisabilityFriendly   Boolean        @default(false) @map("is_disability_friendly")
+  crawledAt              DateTime       @map("crawled_at")
+  expiresAt              DateTime?      @map("expires_at")
+  rawData                Json?          @map("raw_data")
+  searchVector           Unsupported("tsvector")? @map("search_vector")
+  userSavedJobs          UserSavedJob[]
 
-  @@unique([source, external_id])
+  @@unique([source, externalId])
   @@index([company, title])
-  @@index([crawled_at(sort: Desc)])
+  @@index([crawledAt(sort: Desc)])
   @@map("jobs")
 }
 
 model UserSavedJob {
-  user_id  String
-  job_id   String
-  saved_at DateTime @default(now())
-  jobs     Job      @relation(fields: [job_id], references: [id], onDelete: Cascade)
-  users    User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  userId   String   @map("user_id")
+  jobId    String   @map("job_id")
+  savedAt  DateTime @default(now()) @map("saved_at")
+  job      Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@id([user_id, job_id])
+  @@id([userId, jobId])
   @@map("user_saved_jobs")
 }
 
@@ -57,12 +57,12 @@ model CrawlLog {
   id            String    @id @default(cuid())
   source        String
   status        String
-  jobs_found    Int
-  jobs_new      Int
-  jobs_updated  Int
-  error_message String?
-  started_at    DateTime
-  completed_at  DateTime?
+  jobsFound     Int      @map("jobs_found")
+  jobsNew       Int      @map("jobs_new")
+  jobsUpdated   Int      @map("jobs_updated")
+  errorMessage  String?  @map("error_message")
+  startedAt     DateTime @map("started_at")
+  completedAt   DateTime? @map("completed_at")
 
   @@map("crawl_logs")
 }

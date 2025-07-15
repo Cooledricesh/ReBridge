@@ -35,7 +35,6 @@ export async function generateMetadata(props: JobDetailPageProps): Promise<Metad
         description: job.description?.substring(0, 160),
         type: 'article',
         publishedTime: job.crawledAt,
-        modifiedTime: job.updatedAt,
       },
       twitter: {
         card: 'summary_large_image',
@@ -67,25 +66,15 @@ export default async function JobDetailPage(props: JobDetailPageProps) {
     } else {
       // Fetch from database
       job = await prisma.job.findUnique({
-        where: { id: params.id },
-        include: {
-          savedByUsers: {
-            select: {
-              userId: true
-            }
-          }
-        }
+        where: { id: params.id }
       });
       
       if (!job) {
         notFound();
       }
       
-      // Update view count
-      await prisma.job.update({
-        where: { id: params.id },
-        data: { viewCount: { increment: 1 } }
-      });
+      // Note: viewCount field doesn't exist in current schema
+      // If you want to track views, you'll need to add this field to the schema
       
       // Cache for 1 hour
       await redis().setex(cacheKey, 3600, JSON.stringify(job));
@@ -100,8 +89,7 @@ export default async function JobDetailPage(props: JobDetailPageProps) {
           {
             OR: [
               { company: job.company },
-              { employmentType: job.employmentType },
-              { location: job.location }
+              { employmentType: job.employmentType }
             ]
           }
         ]
@@ -112,17 +100,19 @@ export default async function JobDetailPage(props: JobDetailPageProps) {
         id: true,
         title: true,
         company: true,
-        location: true,
+        locationJson: true,
         employmentType: true,
-        salaryMin: true,
-        salaryMax: true,
-        salaryInfo: true,
+        salaryRange: true,
         source: true,
-        expiresAt: true
+        expiresAt: true,
+        isDisabilityFriendly: true
       }
     });
     
     // Generate structured data for SEO
+    const locationData = job.locationJson as any;
+    const salaryData = job.salaryRange as any;
+    
     const structuredData = {
       '@context': 'https://schema.org',
       '@type': 'JobPosting',
@@ -140,27 +130,25 @@ export default async function JobDetailPage(props: JobDetailPageProps) {
         '@type': 'Organization',
         name: job.company || '회사명 미정',
       },
-      jobLocation: {
+      jobLocation: locationData ? {
         '@type': 'Place',
         address: {
           '@type': 'PostalAddress',
-          addressLocality: job.location,
-          addressRegion: job.locationDetail,
+          addressLocality: locationData.address || locationData.city,
+          addressRegion: locationData.region,
           addressCountry: 'KR',
         },
-      },
-      baseSalary: job.salaryMin && job.salaryMax ? {
+      } : undefined,
+      baseSalary: salaryData?.min ? {
         '@type': 'MonetaryAmount',
-        currency: 'KRW',
+        currency: salaryData.currency || 'KRW',
         value: {
           '@type': 'QuantitativeValue',
-          minValue: job.salaryMin,
-          maxValue: job.salaryMax,
+          minValue: salaryData.min,
+          maxValue: salaryData.max,
           unitText: 'YEAR',
         },
       } : undefined,
-      experienceRequirements: job.experienceLevel,
-      educationRequirements: job.educationLevel,
     };
     
     return (

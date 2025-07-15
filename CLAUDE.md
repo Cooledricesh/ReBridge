@@ -1,6 +1,32 @@
-# CLAUDE.md
+## CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Prisma Naming Convention (IMPORTANT - 최종 결정)
+
+### DB와 코드의 명명 규칙 분리
+- **DB 스키마**: snake_case (PostgreSQL 표준)
+- **TypeScript/JavaScript 코드**: camelCase (JS/TS 표준)
+- **매핑**: Prisma의 `@map` 어노테이션으로 연결
+
+### 예시:
+```prisma
+model User {
+  id                     Int      @id @default(autoincrement())
+  passwordHash           String   @map("password_hash")        // DB: password_hash, 코드: passwordHash
+  isRegisteredDisability Boolean  @default(false) @map("is_registered_disability")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+  
+  @@map("users")  // 테이블명은 snake_case
+}
+```
+
+### 이유:
+1. DB 레벨에서는 PostgreSQL 표준인 snake_case 유지
+2. 애플리케이션 코드에서는 JavaScript/TypeScript 표준인 camelCase 사용
+3. 더 이상 혼란 없이 양쪽 표준을 모두 만족
+4. Prisma 외의 도구나 raw SQL 사용 시에도 문제 없음
 
 ## Commands
 
@@ -156,6 +182,9 @@ Example of **CORRECT** structure in `globals.css`:
   - 서버를 시작하면 백그라운드로 유지되지 않고 바로 종료됨
   - timeout이 발생하면 프로세스가 강제 종료됨
 - "Ready"라고 표시되다가 죽는 현상은 이러한 세션 관리 문제 때문임
+
+## Schema Management
+- 이제 스키마는 무조건 Snake case이며 절대 camel case로 변경은 하지 않는다.
 
 <vooster-docs>
 - @vooster-docs/prd.md

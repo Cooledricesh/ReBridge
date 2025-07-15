@@ -69,12 +69,15 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
     }
   };
 
-  const formatSalary = (min: number | null, max: number | null, info: string | null) => {
-    if (info) return info;
-    if (min && max) return `${(min / 10000).toFixed(0)}만원 ~ ${(max / 10000).toFixed(0)}만원`;
-    if (min) return `${(min / 10000).toFixed(0)}만원 이상`;
-    if (max) return `${(max / 10000).toFixed(0)}만원 이하`;
-    return '추후 협의';
+  const formatSalary = (salaryRange: any) => {
+    if (!salaryRange) return '급여 협의';
+    const { min, max, currency } = salaryRange;
+    if (currency === 'KRW') {
+      const minStr = min ? `${(min / 10000).toFixed(0)}만원` : '';
+      const maxStr = max ? `${(max / 10000).toFixed(0)}만원` : '';
+      return max ? `${minStr} ~ ${maxStr}` : `${minStr} 이상` || '급여 협의';
+    }
+    return '급여 협의';
   };
 
   const getExpiryStatus = (expiresAt: Date | string | null) => {
@@ -92,14 +95,14 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
   const expiryStatus = getExpiryStatus(job.expiresAt);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-50">
+      <header className="bg-white dark:bg-gray-800 border-b sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <button
               onClick={() => router.back()}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              className="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>뒤로가기</span>
@@ -148,21 +151,21 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
                     )}
                   </div>
                   
-                  <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                     {job.title}
                   </h1>
                   
-                  <div className="flex items-center gap-4 text-gray-600">
+                  <div className="flex items-center gap-4 text-gray-900 dark:text-gray-200">
                     {job.company && (
                       <div className="flex items-center gap-1">
                         <Building2 className="w-4 h-4" />
-                        <span>{job.company}</span>
+                        <span className="font-medium">{job.company}</span>
                       </div>
                     )}
-                    {(job.location || job.locationDetail) && (
+                    {job.locationJson && (
                       <div className="flex items-center gap-1">
                         <MapPin className="w-4 h-4" />
-                        <span>{job.location} {job.locationDetail}</span>
+                        <span>{(job.locationJson as any).address}</span>
                       </div>
                     )}
                   </div>
@@ -173,33 +176,33 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500">고용형태</span>
-                  <p className="font-medium">{job.employmentType || '정보 없음'}</p>
+                  <span className="text-gray-600 dark:text-gray-400">고용형태</span>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{job.employmentType || '정보 없음'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">급여</span>
-                  <p className="font-medium">
-                    {formatSalary(job.salaryMin, job.salaryMax, job.salaryInfo)}
+                  <span className="text-gray-600 dark:text-gray-400">급여</span>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">
+                    {formatSalary(job.salaryRange)}
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-500">경력</span>
-                  <p className="font-medium">{job.experienceLevel || '무관'}</p>
+                  <span className="text-gray-600 dark:text-gray-400">경력</span>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{'무관'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-500">학력</span>
-                  <p className="font-medium">{job.educationLevel || '무관'}</p>
+                  <span className="text-gray-600 dark:text-gray-400">학력</span>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{'무관'}</p>
                 </div>
               </div>
             </Card>
 
             {/* Job Description */}
             <Card className="p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                 <FileText className="w-5 h-5" />
                 상세 내용
               </h2>
-              <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
+              <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
                 {job.description || '상세 정보가 없습니다.'}
               </div>
             </Card>
@@ -207,7 +210,7 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
             {/* Requirements */}
             {job.requirements && job.requirements.length > 0 && (
               <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                   <CheckCircle className="w-5 h-5" />
                   자격 요건
                 </h2>
@@ -215,7 +218,7 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
                   {job.requirements.map((req: string, index: number) => (
                     <li key={index} className="flex items-start gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
-                      <span className="text-gray-700">{req}</span>
+                      <span className="text-gray-800 dark:text-gray-200">{req}</span>
                     </li>
                   ))}
                 </ul>
@@ -225,7 +228,7 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
             {/* Preferred Qualifications */}
             {job.preferredQualifications && job.preferredQualifications.length > 0 && (
               <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                   <Users className="w-5 h-5" />
                   우대 사항
                 </h2>
@@ -233,7 +236,7 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
                   {job.preferredQualifications.map((qual: string, index: number) => (
                     <li key={index} className="flex items-start gap-2">
                       <div className="w-1.5 h-1.5 bg-gray-400 rounded-full mt-1.5" />
-                      <span className="text-gray-700">{qual}</span>
+                      <span className="text-gray-800 dark:text-gray-200">{qual}</span>
                     </li>
                   ))}
                 </ul>
@@ -243,7 +246,7 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
             {/* Benefits */}
             {job.benefits && job.benefits.length > 0 && (
               <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4">복리후생</h2>
+                <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">복리후생</h2>
                 <div className="flex flex-wrap gap-2">
                   {job.benefits.map((benefit: string, index: number) => (
                     <Badge key={index} variant="secondary">
@@ -275,7 +278,7 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
               </Button>
               
               {job.applicationDeadline && (
-                <p className="text-sm text-gray-500 mt-3 text-center">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-3 text-center">
                   마감일: {format(new Date(job.applicationDeadline), 'yyyy년 MM월 dd일', { locale: ko })}
                 </p>
               )}
@@ -283,13 +286,13 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
 
             {/* Job Info */}
             <Card className="p-6">
-              <h3 className="font-semibold mb-4">채용 정보</h3>
+              <h3 className="font-semibold mb-4 text-gray-900 dark:text-gray-100">채용 정보</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex items-start gap-2">
-                  <Calendar className="w-4 h-4 text-gray-500 mt-0.5" />
+                  <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-gray-500">등록일</p>
-                    <p className="font-medium">
+                    <p className="text-gray-600 dark:text-gray-400">등록일</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">
                       {format(new Date(job.crawledAt), 'yyyy년 MM월 dd일', { locale: ko })}
                     </p>
                   </div>
@@ -297,10 +300,10 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
                 
                 {job.expiresAt && (
                   <div className="flex items-start gap-2">
-                    <Clock className="w-4 h-4 text-gray-500 mt-0.5" />
+                    <Clock className="w-4 h-4 text-gray-600 dark:text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-gray-500">마감일</p>
-                      <p className="font-medium">
+                      <p className="text-gray-600 dark:text-gray-400">마감일</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">
                         {format(new Date(job.expiresAt), 'yyyy년 MM월 dd일', { locale: ko })}
                       </p>
                     </div>
@@ -308,19 +311,19 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
                 )}
                 
                 <div className="flex items-start gap-2">
-                  <Briefcase className="w-4 h-4 text-gray-500 mt-0.5" />
+                  <Briefcase className="w-4 h-4 text-gray-600 dark:text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-gray-500">채용 형태</p>
-                    <p className="font-medium">{job.employmentType || '정보 없음'}</p>
+                    <p className="text-gray-600 dark:text-gray-400">채용 형태</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{job.employmentType || '정보 없음'}</p>
                   </div>
                 </div>
                 
                 {job.workingHours && (
                   <div className="flex items-start gap-2">
-                    <Clock className="w-4 h-4 text-gray-500 mt-0.5" />
+                    <Clock className="w-4 h-4 text-gray-600 dark:text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-gray-500">근무 시간</p>
-                      <p className="font-medium">{job.workingHours}</p>
+                      <p className="text-gray-600 dark:text-gray-400">근무 시간</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{job.workingHours}</p>
                     </div>
                   </div>
                 )}
@@ -330,19 +333,19 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
             {/* Related Jobs */}
             {relatedJobs.length > 0 && (
               <Card className="p-6">
-                <h3 className="font-semibold mb-4">추천 채용공고</h3>
+                <h3 className="font-semibold mb-4 text-gray-900 dark:text-gray-100">추천 채용공고</h3>
                 <div className="space-y-3">
                   {relatedJobs.map((relatedJob) => (
                     <Link
                       key={relatedJob.id}
                       href={`/jobs/${relatedJob.id}`}
-                      className="block p-3 rounded-lg border hover:bg-gray-50 transition-colors"
+                      className="block p-3 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                     >
-                      <h4 className="font-medium text-sm mb-1 line-clamp-2">
+                      <h4 className="font-medium text-sm mb-1 line-clamp-2 text-gray-900 dark:text-gray-100">
                         {relatedJob.title}
                       </h4>
-                      <p className="text-xs text-gray-500">
-                        {relatedJob.company} · {relatedJob.location}
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {relatedJob.company} · {relatedJob.locationJson?.address || '위치 미정'}
                       </p>
                     </Link>
                   ))}
