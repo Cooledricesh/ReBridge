@@ -37,10 +37,10 @@ const sourceNames: Record<string, string> = {
 }
 
 const sourceColors: Record<string, string> = {
-  WORKTOGETHER: 'default',
-  SARAMIN: 'secondary',
-  WORK24: 'outline',
-  JOBKOREA: 'destructive'
+  WORKTOGETHER: 'secondary',
+  SARAMIN: 'default',
+  WORK24: 'destructive',
+  JOBKOREA: 'outline'
 }
 
 export default function SavedJobsClient() {

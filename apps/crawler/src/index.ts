@@ -89,7 +89,6 @@ async function scheduleCrawls() {
   console.log('Scheduling crawl jobs...');
   
   // Add initial crawl jobs
-  await crawlQueue.add('crawl-worktogether', { source: 'workTogether', page: 1 });
   await crawlQueue.add('crawl-saramin', { source: 'saramin', page: 1 });
   await crawlQueue.add('crawl-work24', { source: 'work24', page: 1 });
   await crawlQueue.add('crawl-jobkorea', { source: 'jobkorea', page: 1 });
@@ -97,7 +96,6 @@ async function scheduleCrawls() {
   // Schedule recurring crawls
   cron.schedule(CRAWL_CONFIG.CRON_SCHEDULE, async () => {
     console.log('Running scheduled crawl...');
-    await crawlQueue.add('crawl-worktogether', { source: 'workTogether', page: 1 });
     await crawlQueue.add('crawl-saramin', { source: 'saramin', page: 1 });
     await crawlQueue.add('crawl-work24', { source: 'work24', page: 1 });
     await crawlQueue.add('crawl-jobkorea', { source: 'jobkorea', page: 1 });

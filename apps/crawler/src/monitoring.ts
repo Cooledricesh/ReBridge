@@ -23,7 +23,7 @@ export class CrawlerMonitoring {
 
   async checkAndAlert(): Promise<MonitoringAlert[]> {
     const alerts: MonitoringAlert[] = [];
-    const sources = ['workTogether', 'saramin', 'work24', 'jobkorea'];
+    const sources = ['saramin', 'work24', 'jobkorea'];
 
     for (const source of sources) {
       // Check failure rate

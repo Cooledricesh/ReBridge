@@ -12,9 +12,9 @@ import {
 } from '@rebridge/shared';
 import { BaseCrawlerAdapter } from '../base';
 
-export class WorkTogetherAdapter extends BaseCrawlerAdapter {
-  source: JobSource = 'workTogether';
-  private baseUrl = 'https://www.worktogether.or.kr';
+export class KEADAdapter extends BaseCrawlerAdapter {
+  source: JobSource = 'kead';
+  private baseUrl = 'https://www.kead.or.kr';
   private browser: Browser | null = null;
 
   async crawl(page: number = 1): Promise<RawJobData[]> {
@@ -34,45 +34,49 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
       });
       const browserPage = await context.newPage();
 
-      // Navigate to job list page
-      const listUrl = `${this.baseUrl}/empInfo/empInfoSrch/list/retriveWorkRegionEmpIntroList.do?pageIndex=${page}`;
-      await browserPage.goto(listUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
+      // Navigate to KEAD job list page
+      // KEAD uses different URL structure for job listings
+      const listUrl = `${this.baseUrl}/common/comm_board_list.jsp?board_code=B08&page=${page}`;
       
-      // Wait for content to load with increased timeout
-      await browserPage.waitForSelector('.board_list, .list_table, .job_list', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
+      await browserPage.goto(listUrl, { 
+        waitUntil: 'domcontentloaded', 
+        timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION 
+      });
+      
+      // Wait for content to load
+      await browserPage.waitForSelector('table.board_list, .board_list, .list_table', { 
+        timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR 
+      });
       
       const html = await browserPage.content();
       const $ = cheerio.load(html);
 
-      // Extract job listings - use multiple possible selectors
-      $('.board_list tbody tr, .list_table tbody tr, .job_list tbody tr').each((_, element) => {
+      // Extract job listings - KEAD specific selectors
+      $('.board_list tbody tr, table.board_list tbody tr').each((_, element) => {
         const $row = $(element);
-        // Skip empty rows or header rows
-        if ($row.find('td').length === 0 || $row.hasClass('no-data')) {
+        
+        // Skip header or empty rows
+        if ($row.hasClass('no_data') || $row.find('td').length === 0) {
           return;
         }
-        const titleLink = $row.find('td.tit a, td.title a, td a.link').first();
+        
+        const titleLink = $row.find('td.al_left a, td.left a, td a').first();
         const href = titleLink.attr('href');
         
         if (href) {
           const externalId = this.extractJobId(href);
           const title = normalizeWhitespace(titleLink.text());
-          // Use more robust selectors for table columns
+          
+          // KEAD specific column structure
           const $tds = $row.find('td');
-          const company = normalizeWhitespace(
-            $tds.eq(1).text() || $row.find('.company').text()
-          );
-          const location = normalizeWhitespace(
-            $tds.eq(2).text() || $row.find('.location').text()
-          );
-          const deadline = normalizeWhitespace(
-            $tds.eq(4).text() || $tds.eq(3).text() || $row.find('.deadline').text()
-          );
+          const company = normalizeWhitespace($tds.eq(2).text());
+          const location = normalizeWhitespace($tds.eq(3).text());
+          const deadline = normalizeWhitespace($tds.eq(4).text());
 
           results.push({
             source: this.source,
             externalId,
-            url: `${this.baseUrl}${href}`,
+            url: href.startsWith('http') ? href : `${this.baseUrl}${href}`,
             data: {
               title,
               company,
@@ -87,10 +91,10 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
       await context.close();
       
       // Apply rate limiting
-      await sleep(CRAWL_CONFIG.REQUEST_DELAY.workTogether * 1000);
+      await sleep(CRAWL_CONFIG.REQUEST_DELAY.kead || 2000);
 
     } catch (error) {
-      console.error('WorkTogether crawl error:', error);
+      console.error('KEAD crawl error:', error);
       throw error;
     }
 
@@ -111,36 +115,42 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
       });
       const page = await context.newPage();
 
-      const detailUrl = `${this.baseUrl}/empInfo/empInfoSrch/detail/empDetailAuthView.do?searchEpSeq=${id}`;
-      await page.goto(detailUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
+      // KEAD detail page URL
+      const detailUrl = `${this.baseUrl}/common/comm_board_view.jsp?board_code=B08&idx=${id}`;
+      
+      await page.goto(detailUrl, { 
+        waitUntil: 'networkidle', 
+        timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION 
+      });
       
       const html = await page.content();
       const $ = cheerio.load(html);
 
       // Wait for detail content to load
-      await page.waitForSelector('.view_top, .detail_top, .content_wrap', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
+      await page.waitForSelector('.board_view, .view_table, .content_view', { 
+        timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR 
+      });
       
-      // Extract detailed information - use multiple possible selectors
+      // Extract detailed information
       const title = normalizeWhitespace(
-        $('.view_top h3').text() ||
-        $('.detail_top h2').text() ||
-        $('.title_area h3').text() ||
-        $('h3.title').first().text()
+        $('.board_view h3').text() ||
+        $('.view_title').text() ||
+        $('h2.title').text()
       );
+      
       const company = normalizeWhitespace(
         $('.company_name').text() ||
-        $('.corp_name').text() ||
-        $('.company').first().text()
-      );
-      const description = normalizeWhitespace(
-        $('.view_content').text() ||
-        $('.detail_content').text() ||
-        $('.job_content').text()
+        $('th:contains("기업명")').next('td').text()
       );
       
-      // Extract structured data from detail table - use multiple possible selectors
+      const description = normalizeWhitespace(
+        $('.view_content').text() ||
+        $('.board_content').text()
+      );
+      
+      // Extract structured data from detail table
       const details: Record<string, string> = {};
-      $('.view_table tr, .detail_table tr, .info_table tr, table.table_view tr').each((_, row) => {
+      $('.view_table tr, .board_view table tr').each((_, row) => {
         const $row = $(row);
         const label = normalizeWhitespace($row.find('th').text());
         const value = normalizeWhitespace($row.find('td').text());
@@ -154,34 +164,34 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
         source: this.source,
         externalId: id,
         title,
-        company,
+        company: company || details['기업명'] || details['회사명'],
         location: {
-          address: details['근무지역'] || undefined
+          address: details['근무지'] || details['근무지역'] || undefined
         },
-        salaryRange: this.parseSalaryRange(details['급여']),
+        salaryRange: this.parseSalaryRange(details['급여'] || details['임금']),
         employmentType: details['고용형태'] || null,
         description,
-        isDisabilityFriendly: true, // WorkTogether는 장애인 채용 전문
+        isDisabilityFriendly: true, // KEAD는 장애인 고용 전문
         crawledAt: new Date(),
-        expiresAt: this.parseDeadline(details['모집마감일']),
+        expiresAt: this.parseDeadline(details['모집마감'] || details['마감일']),
         requirements: this.parseRequirements(details),
         benefits: this.parseBenefits(details),
-        applicationDeadline: this.parseDeadline(details['모집마감일']),
+        applicationDeadline: this.parseDeadline(details['모집마감'] || details['마감일']),
         contactInfo: {
-          phone: details['담당자 연락처'] || undefined,
-          email: details['담당자 이메일'] || undefined
+          phone: details['연락처'] || details['전화번호'] || undefined,
+          email: details['이메일'] || undefined
         }
       };
 
       await context.close();
       
       // Apply rate limiting
-      await sleep(CRAWL_CONFIG.REQUEST_DELAY.workTogether * 1000);
+      await sleep(CRAWL_CONFIG.REQUEST_DELAY.kead || 2000);
 
       return jobDetail;
 
     } catch (error) {
-      console.error('WorkTogether parseJobDetail error:', error);
+      console.error('KEAD parseJobDetail error:', error);
       throw error;
     }
   }
@@ -194,8 +204,8 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
       externalId: raw.externalId,
       title: (data.title as string) || '',
       company: (data.company as string) || null,
-      locationJson: data.location ? { address: data.location } : null,
-      salaryRange: null, // Will be parsed from detail
+      locationJson: data.location ? { address: data.location as string } : null,
+      salaryRange: null,
       employmentType: null,
       description: null,
       isDisabilityFriendly: true,
@@ -206,7 +216,8 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
   }
 
   private extractJobId(href: string): string {
-    const match = href.match(/searchEpSeq=(\d+)/);
+    // KEAD uses idx parameter
+    const match = href.match(/idx=(\d+)/);
     return match ? match[1] : '';
   }
 
@@ -224,8 +235,8 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
   private parseDeadline(deadlineText?: string): Date | null {
     if (!deadlineText) return null;
     
-    // Parse Korean date format (예: 2024.12.31)
-    const match = deadlineText.match(/(\d{4})\.(\d{2})\.(\d{2})/);
+    // Parse Korean date format (예: 2024.12.31 or 2024-12-31)
+    const match = deadlineText.match(/(\d{4})[-.](\d{2})[-.](\d{2})/);
     if (match) {
       return new Date(`${match[1]}-${match[2]}-${match[3]}`);
     }
@@ -236,8 +247,8 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
   private parseRequirements(details: Record<string, string>): string[] {
     const requirements: string[] = [];
     
-    if (details['자격요건']) {
-      requirements.push(details['자격요건']);
+    if (details['자격요건'] || details['지원자격']) {
+      requirements.push(details['자격요건'] || details['지원자격']);
     }
     if (details['우대사항']) {
       requirements.push(`우대: ${details['우대사항']}`);
@@ -249,8 +260,9 @@ export class WorkTogetherAdapter extends BaseCrawlerAdapter {
   private parseBenefits(details: Record<string, string>): string[] {
     const benefits: string[] = [];
     
-    if (details['복리후생']) {
-      benefits.push(...details['복리후생'].split(',').map(b => b.trim()));
+    if (details['복리후생'] || details['복지']) {
+      const benefitText = details['복리후생'] || details['복지'];
+      benefits.push(...benefitText.split(',').map(b => b.trim()));
     }
     
     return benefits;

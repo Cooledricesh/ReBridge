@@ -39,6 +39,20 @@ interface SavedJob {
   savedAt: Date | string;
 }
 
+const sourceColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  WORKTOGETHER: 'secondary',
+  SARAMIN: 'default',
+  WORK24: 'destructive',
+  JOBKOREA: 'outline'
+};
+
+const sourceNames: Record<string, string> = {
+  WORKTOGETHER: '워크투게더',
+  SARAMIN: '사람인',
+  WORK24: '고용24',
+  JOBKOREA: '잡코리아'
+};
+
 export default function SavedJobsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -281,7 +295,9 @@ export default function SavedJobsPage() {
                             {job.isDisabilityFriendly && (
                               <Badge variant="secondary">장애인채용</Badge>
                             )}
-                            <Badge variant="outline">{job.source}</Badge>
+                            <Badge variant={sourceColors[job.source] || 'outline'}>
+                              {sourceNames[job.source] || job.source}
+                            </Badge>
                           </div>
                         </div>
                       </div>

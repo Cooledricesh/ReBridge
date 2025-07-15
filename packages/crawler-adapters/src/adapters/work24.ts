@@ -34,43 +34,170 @@ export class Work24Adapter extends BaseCrawlerAdapter {
       });
       const browserPage = await context.newPage();
 
-      // Navigate to job list page with disability filter
-      const listUrl = `${this.baseUrl}/wk/a/c/CA0101.do?srchType=12&srchKeyword=&rowsPerPage=20&pageNo=${page}&srchEmplTypList=&srchWorkAreaList=&srchMjrNmList=&srchJobKindList=&srchWageType=&srchWageMin=&srchWageMax=&srchWorkDayTyp=&srchDisablGbn=Y`;
-      await browserPage.goto(listUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
+      // Try GET request with query parameters
+      console.log('Work24: Navigating to search results with "장애인" keyword...');
+      const searchUrl = `${this.baseUrl}/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=${encodeURIComponent('장애인')}&searchType=1`;
       
-      // Wait for content to load with increased timeout
-      await browserPage.waitForSelector('.tbl-type01', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
+      await browserPage.goto(searchUrl, {
+        waitUntil: 'networkidle',
+        timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION
+      });
+      
+      console.log('Work24: Waiting for search results...');
+      await browserPage.waitForTimeout(5000);
+      
+      // Check current URL after search
+      const currentUrl = browserPage.url();
+      console.log('Work24: Current URL after search:', currentUrl);
+      
+      // Check if we have results using multiple selectors
+      const resultSelectors = [
+        'input[name="chkWantedAuthNo"]',
+        '.cp_name',
+        '.company_name',
+        '.recruit_list',
+        '.job_list',
+        'table tbody tr'
+      ];
+      
+      let hasResults = 0;
+      for (const selector of resultSelectors) {
+        const count = await browserPage.locator(selector).count();
+        if (count > 0) {
+          console.log(`Work24: Found ${count} elements with selector: ${selector}`);
+          hasResults = count;
+          break;
+        }
+      }
+      
+      if (hasResults === 0) {
+        console.log('Work24: No results found with standard selectors');
+        // Try to find any text containing "장애인" to verify we're on the right page
+        const pageText = await browserPage.textContent('body');
+        const matches = (pageText.match(/장애인/g) || []).length;
+        console.log(`Work24: Found ${matches} occurrences of "장애인" on the page`);
+        
+        if (matches === 0) {
+          throw new Error('Work24 search did not return any results');
+        }
+      }
       
       const html = await browserPage.content();
       const $ = cheerio.load(html);
 
-      // Extract job listings - use more specific selector
-      $('.tbl-type01 tbody tr:not(.no-data)').each((_, element) => {
-        const $row = $(element);
-        const titleLink = $row.find('.al-l a');
-        const onclick = titleLink.attr('onclick');
+      // Extract job listings - Work24 search result structure
+      // First try the checkbox method
+      const checkboxes = $('input[type="checkbox"][name="chkWantedAuthNo"]');
+      
+      if (checkboxes.length > 0) {
+        console.log(`Work24: Found ${checkboxes.length} job listings via checkboxes`);
         
-        if (onclick) {
-          const externalId = this.extractJobId(onclick);
-          const title = normalizeWhitespace(titleLink.text());
-          const company = normalizeWhitespace($row.find('td:nth-child(3)').text());
-          const location = normalizeWhitespace($row.find('td:nth-child(4)').text());
-          const deadline = normalizeWhitespace($row.find('td:nth-child(6)').text());
-
-          results.push({
-            source: this.source,
-            externalId,
-            url: `${this.baseUrl}/wk/a/c/CA0301.do?jobId=${externalId}`,
-            data: {
-              title,
-              company,
-              location,
-              deadline,
-              listingHtml: $row.html() || ''
+        checkboxes.each((_, element) => {
+          const $checkbox = $(element);
+          const externalId = $checkbox.val() as string;
+          
+          if (externalId) {
+            // Navigate up to find the job container
+            const $jobSection = $checkbox.parent().parent().parent();
+            
+            // Extract company name (첫 번째 줄에 있음)
+            const company = normalizeWhitespace($jobSection.find('.cp_name').text());
+            
+            // Extract job title (회사명 다음 링크)
+            const titleLink = $jobSection.find('a').eq(1); // 첫 번째는 회사 링크, 두 번째가 채용공고 제목
+            const title = normalizeWhitespace(titleLink.text());
+            
+            // Extract location and other details from list items
+            let location = '';
+            let salary = '';
+            let deadline = '';
+            
+            $jobSection.find('ul li').each((_, li) => {
+              const text = $(li).text();
+              if (text.includes('지역 :')) {
+                location = normalizeWhitespace(text.split(':')[1]);
+              } else if (text.includes('급여 :')) {
+                salary = normalizeWhitespace(text.split(':')[1]);
+              }
+            });
+            
+            // Extract deadline from D-day badge
+            const ddayElement = $jobSection.find('[class*="d-"]');
+            if (ddayElement.length > 0) {
+              deadline = normalizeWhitespace(ddayElement.text());
             }
-          });
-        }
-      });
+
+            results.push({
+              source: this.source,
+              externalId,
+              url: `${this.baseUrl}/wk/a/b/1200/retriveDtlEmpSrchDetail.do?wantedAuthNo=${externalId}`,
+              data: {
+                title,
+                company,
+                location,
+                salary,
+                deadline,
+                listingHtml: $jobSection.html() || ''
+              }
+            });
+          }
+        });
+      } else {
+        // Fallback method: try to extract from .cp_name elements
+        console.log('Work24: Trying alternative extraction method...');
+        
+        $('.cp_name').each((index, element) => {
+          const $companyElement = $(element);
+          const company = normalizeWhitespace($companyElement.text());
+          
+          // Find the parent container
+          const $container = $companyElement.closest('li, div, tr');
+          
+          // Try to find title link
+          const $titleLink = $container.find('a').not(':has(.cp_name)').first();
+          const title = normalizeWhitespace($titleLink.text());
+          
+          // Try to extract ID from link or onclick
+          let externalId = '';
+          const href = $titleLink.attr('href') || '';
+          const onclick = $titleLink.attr('onclick') || '';
+          
+          // Extract from href
+          const hrefMatch = href.match(/wantedAuthNo=(\d+)/);
+          if (hrefMatch) {
+            externalId = hrefMatch[1];
+          } else {
+            // Extract from onclick
+            const onclickMatch = onclick.match(/['"](\d+)['"]/);
+            if (onclickMatch) {
+              externalId = onclickMatch[1];
+            } else {
+              // Use index as fallback
+              externalId = `work24_${Date.now()}_${index}`;
+            }
+          }
+          
+          if (company && title) {
+            results.push({
+              source: this.source,
+              externalId,
+              url: externalId.includes('work24_') 
+                ? currentUrl 
+                : `${this.baseUrl}/wk/a/b/1200/retriveDtlEmpSrchDetail.do?wantedAuthNo=${externalId}`,
+              data: {
+                title,
+                company,
+                location: '',
+                salary: '',
+                deadline: '',
+                listingHtml: $container.html() || ''
+              }
+            });
+          }
+        });
+      }
+      
+      console.log(`Work24: Extracted ${results.length} job listings`);
 
       await context.close();
       
@@ -99,43 +226,82 @@ export class Work24Adapter extends BaseCrawlerAdapter {
       });
       const page = await context.newPage();
 
-      const detailUrl = `${this.baseUrl}/wk/a/c/CA0301.do?jobId=${id}`;
+      const detailUrl = `${this.baseUrl}/wk/a/b/1200/retriveDtlEmpSrchDetail.do?wantedAuthNo=${id}`;
       await page.goto(detailUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
       const html = await page.content();
       const $ = cheerio.load(html);
 
-      // Wait for detail content to load
-      await page.waitForSelector('.content, .detail-content, .job-content', { timeout: CRAWL_CONFIG.TIMEOUT.SELECTOR });
+      // Wait for page to load - Work24 might have different structure
+      await page.waitForTimeout(3000);
       
-      // Extract detailed information - use multiple possible selectors
+      // Check if page loaded properly
+      const pageTitle = await page.title();
+      console.log(`Work24: Detail page title: ${pageTitle}`);
+      
+      // Save screenshot for debugging
+      await page.screenshot({ path: 'work24-detail-debug.png', fullPage: false });
+      console.log('Work24: Screenshot saved as work24-detail-debug.png');
+      
+      // Extract detailed information - Work24 specific selectors
+      // Try to find title in various ways
       const title = normalizeWhitespace(
-        $('.job-detail-top h3').text() || 
-        $('.detail-title').text() || 
-        $('h2.title').text() ||
-        $('h3.title').first().text()
-      );
-      const company = normalizeWhitespace(
-        $('.company-info .name').text() || 
-        $('.company-name').text() ||
-        $('.corp-name').text()
-      );
-      const description = normalizeWhitespace(
-        $('.job-detail-content').text() || 
-        $('.detail-content').text() ||
-        $('.job-content').text()
+        $('h2').first().text() || 
+        $('h3').first().text() ||
+        $('.title').first().text() ||
+        $('[class*="title"]').first().text() ||
+        ''
       );
       
-      // Extract structured data from detail sections - use multiple possible selectors
+      // Extract company name
+      const company = normalizeWhitespace(
+        $('.cp_name').text() || 
+        $('[class*="company"]').first().text() ||
+        $('[class*="corp"]').first().text() ||
+        ''
+      );
+      
+      // Extract all text content as description
+      const contentAreas = [
+        $('.content').text(),
+        $('.detail').text(),
+        $('[class*="content"]').text(),
+        $('.tbl_type01').text(),
+        $('table').text()
+      ];
+      const description = normalizeWhitespace(
+        contentAreas.find(text => text && text.length > 50) || 
+        $('body').text().substring(0, 1000)
+      );
+      
+      // Extract structured data from tables
       const details: Record<string, string> = {};
-      $('.job-info-table tr, .detail-table tr, .info-table tr, table.tbl-type01 tr').each((_, row) => {
-        const $row = $(row);
-        const label = normalizeWhitespace($row.find('th').text());
-        const value = normalizeWhitespace($row.find('td').text());
-        if (label && value) {
-          details[label] = value;
-        }
-      });
+      
+      // Try multiple table selectors
+      const tableSelectors = [
+        'table.tbl_type01 tr',
+        'table.tbl-type01 tr',
+        'table tr',
+        '.info_table tr',
+        '.detail_table tr'
+      ];
+      
+      for (const selector of tableSelectors) {
+        $(selector).each((_, row) => {
+          const $row = $(row);
+          const cells = $row.find('th, td');
+          
+          if (cells.length >= 2) {
+            const label = normalizeWhitespace($(cells[0]).text());
+            const value = normalizeWhitespace($(cells[1]).text());
+            if (label && value && !label.includes('체크박스')) {
+              details[label] = value;
+            }
+          }
+        });
+      }
+      
+      console.log('Work24: Extracted details:', Object.keys(details).length, 'fields');
 
       const jobDetail: JobDetail = {
         id: '',

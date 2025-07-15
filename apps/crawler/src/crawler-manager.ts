@@ -7,7 +7,6 @@ import {
   CRAWL_CONFIG
 } from '@rebridge/shared';
 import { 
-  WorkTogetherAdapter, 
   SaraminAdapter,
   Work24Adapter,
   JobKoreaAdapter,
@@ -29,7 +28,6 @@ export class CrawlerManager {
 
   async initialize(): Promise<void> {
     // Initialize adapters
-    this.adapters.set('workTogether', new WorkTogetherAdapter());
     this.adapters.set('saramin', new SaraminAdapter());
     this.adapters.set('work24', new Work24Adapter());
     this.adapters.set('jobkorea', new JobKoreaAdapter());

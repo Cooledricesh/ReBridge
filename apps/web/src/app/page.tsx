@@ -142,13 +142,13 @@ export default function HomePage() {
   const getSourceBadgeVariant = (source: string) => {
     switch (source) {
       case 'workTogether':
-        return 'default';
-      case 'saramin':
         return 'secondary';
+      case 'saramin':
+        return 'default';
       case 'work24':
-        return 'outline';
-      case 'jobkorea':
         return 'destructive';
+      case 'jobkorea':
+        return 'outline';
       default:
         return 'default';
     }

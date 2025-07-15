@@ -148,17 +148,14 @@ Example of **CORRECT** structure in `globals.css`:
 - These were merged with `src/app/` as the final location
 - This is the correct Next.js 13+ App Router structure
 
+## Terminal Session and Server Management
 
-
-
-
-
-
-
-
-
-
-
+### Server Termination and Session Challenges
+- 서버가 계속 죽으면 터미널 세션 문제를 놓쳤네요.
+- 사용하는 도구의 특성으로 인한 문제:
+  - 서버를 시작하면 백그라운드로 유지되지 않고 바로 종료됨
+  - timeout이 발생하면 프로세스가 강제 종료됨
+- "Ready"라고 표시되다가 죽는 현상은 이러한 세션 관리 문제 때문임
 
 <vooster-docs>
 - @vooster-docs/prd.md

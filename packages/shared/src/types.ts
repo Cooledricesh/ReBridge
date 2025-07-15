@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const JobSourceSchema = z.enum(['workTogether', 'work24', 'saramin', 'jobkorea']);
+export const JobSourceSchema = z.enum(['work24', 'saramin', 'jobkorea']);
 export type JobSource = z.infer<typeof JobSourceSchema>;
 
 export const JobSchema = z.object({

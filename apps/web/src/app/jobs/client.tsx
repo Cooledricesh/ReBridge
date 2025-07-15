@@ -41,7 +41,7 @@ interface JobsListClientProps {
 const sourceColors: Record<string, string> = {
   WORKTOGETHER: 'bg-blue-100 text-blue-800',
   SARAMIN: 'bg-purple-100 text-purple-800',
-  WORK24: 'bg-green-100 text-green-800',
+  WORK24: 'bg-teal-100 text-teal-800',
   JOBKOREA: 'bg-orange-100 text-orange-800'
 };
 
