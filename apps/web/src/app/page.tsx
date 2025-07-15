@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,12 @@ import {
   Filter,
   ChevronDown,
   Bookmark,
-  ExternalLink
+  ExternalLink,
+  ArrowRight,
+  Sparkles,
+  Users,
+  Target,
+  Shield
 } from 'lucide-react';
 import {
   Select,
@@ -25,6 +30,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from 'next/link';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import HeroBackground from '@/components/three/HeroBackground';
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,10 +49,122 @@ export default function HomePage() {
   const [savingJobs, setSavingJobs] = useState<Set<string>>(new Set());
   const itemsPerPage = 20;
 
+  // Refs for GSAP animations
+  const heroRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLFormElement>(null);
+  const featuresRef = useRef<HTMLDivElement>(null);
+  const jobsRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     fetchJobs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy, filterSource, currentPage]);
+
+  useEffect(() => {
+    // GSAP animations
+    const ctx = gsap.context(() => {
+      // Hero section animation
+      gsap.from('.hero-title', {
+        y: 50,
+        opacity: 0,
+        duration: 1,
+        ease: 'power3.out',
+      });
+
+      gsap.from('.hero-subtitle', {
+        y: 30,
+        opacity: 0,
+        duration: 1,
+        delay: 0.2,
+        ease: 'power3.out',
+      });
+
+      // Search box animation
+      if (searchRef.current) {
+        gsap.from(searchRef.current, {
+          y: 30,
+          opacity: 0,
+          duration: 1,
+          delay: 0.4,
+          ease: 'power3.out',
+        });
+      }
+
+      // Popular keywords animation
+      gsap.from('.keyword-button', {
+        scale: 0,
+        opacity: 0,
+        duration: 0.5,
+        stagger: 0.1,
+        delay: 0.6,
+        ease: 'back.out(1.7)',
+      });
+
+      // Features animation
+      gsap.from('.feature-card', {
+        scrollTrigger: {
+          trigger: featuresRef.current,
+          start: 'top 80%',
+          end: 'bottom 20%',
+          toggleActions: 'play none none reverse',
+        },
+        y: 50,
+        opacity: 0,
+        duration: 0.8,
+        stagger: 0.2,
+        ease: 'power3.out',
+      });
+
+      // Stats animation
+      gsap.from('.stat-item', {
+        scrollTrigger: {
+          trigger: statsRef.current,
+          start: 'top 80%',
+          end: 'bottom 20%',
+          toggleActions: 'play none none reverse',
+        },
+        scale: 0,
+        opacity: 0,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: 'back.out(1.7)',
+      });
+
+      // Job cards animation
+      ScrollTrigger.batch('.job-card', {
+        onEnter: (batch) => gsap.to(batch, {
+          opacity: 1,
+          y: 0,
+          stagger: 0.15,
+          overwrite: true,
+        }),
+        onLeave: (batch) => gsap.to(batch, {
+          opacity: 0,
+          y: 100,
+          stagger: 0.15,
+          overwrite: true,
+        }),
+        onEnterBack: (batch) => gsap.to(batch, {
+          opacity: 1,
+          y: 0,
+          stagger: 0.15,
+          overwrite: true,
+        }),
+        onLeaveBack: (batch) => gsap.to(batch, {
+          opacity: 0,
+          y: -100,
+          stagger: 0.15,
+          overwrite: true,
+        }),
+      });
+
+      // Set initial state for job cards
+      gsap.set('.job-card', { opacity: 0, y: 50 });
+    });
+
+    return () => ctx.revert();
+  }, [jobs]);
 
   const fetchJobs = async (query = searchQuery) => {
     setLoading(true);
@@ -189,68 +311,81 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-50">
+      <header className="bg-white/80 backdrop-blur-md border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center">
-                <h1 className="text-xl font-bold text-gray-900">ReBridge</h1>
+              <Link href="/" className="flex items-center group">
+                <h1 className="text-xl font-bold text-gray-900 group-hover:text-primary transition-colors">
+                  ReBridge
+                </h1>
                 <Badge variant="secondary" className="ml-2 text-xs">Beta</Badge>
               </Link>
             </div>
             <nav className="flex items-center gap-4">
               <Link href="/jobs">
-                <Button variant="ghost" size="sm">채용공고</Button>
+                <Button variant="ghost" size="sm" className="hover:scale-105 transition-transform">
+                  채용공고
+                </Button>
               </Link>
-              <Button variant="ghost" size="sm">기업정보</Button>
-              <Button variant="ghost" size="sm">커뮤니티</Button>
+              <Button variant="ghost" size="sm" className="hover:scale-105 transition-transform">
+                기업정보
+              </Button>
+              <Button variant="ghost" size="sm" className="hover:scale-105 transition-transform">
+                커뮤니티
+              </Button>
               <div className="w-px h-6 bg-gray-200" />
-              <Button variant="outline" size="sm">로그인</Button>
+              <Button variant="outline" size="sm" className="hover:scale-105 transition-transform">
+                로그인
+              </Button>
             </nav>
           </div>
         </div>
       </header>
 
-      {/* Hero Section with Search */}
-      <section className="bg-gradient-to-b from-secondary/20 to-background py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-foreground mb-2">
+      {/* Hero Section with Three.js Background */}
+      <section ref={heroRef} className="relative overflow-hidden py-20">
+        <HeroBackground />
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="hero-title text-5xl font-bold text-foreground mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-600">
               당신의 새로운 시작을 응원합니다
             </h2>
-            <p className="text-muted-foreground">
+            <p className="hero-subtitle text-xl text-muted-foreground">
               정신장애인을 위한 맞춤형 채용정보를 한 곳에서 확인하세요
             </p>
           </div>
           
           <div className="max-w-3xl mx-auto">
-            <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5" />
+            <form ref={searchRef} onSubmit={handleSearch} className="relative group">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground h-5 w-5 transition-colors group-hover:text-primary" />
               <Input
                 type="text"
                 placeholder="직무, 회사명, 지역을 검색해보세요"
-                className="pl-12 pr-32 h-14 text-base border-border rounded-lg shadow-sm transition-soft focus:shadow-md"
+                className="pl-12 pr-32 h-16 text-lg border-2 border-border rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl focus:shadow-xl focus:border-primary"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               <Button 
                 type="submit" 
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-10 px-6"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 h-12 px-8 text-base hover:scale-105 transition-transform"
               >
                 검색
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </form>
             
-            <div className="flex items-center justify-center gap-2 mt-4">
+            <div className="flex items-center justify-center gap-2 mt-6">
+              <Sparkles className="h-4 w-4 text-yellow-500" />
               <span className="text-sm text-muted-foreground">인기 검색어:</span>
               {['사무직', '개발자', '디자이너', '서울', '재택근무'].map((keyword) => (
                 <Button
                   key={keyword}
                   variant="ghost"
                   size="sm"
-                  className="text-sm text-primary hover:text-primary/80 transition-soft"
+                  className="keyword-button text-sm text-primary hover:text-primary/80 hover:bg-primary/10 transition-all"
                   onClick={() => {
                     setSearchQuery(keyword);
                     setCurrentPage(1);
@@ -260,6 +395,59 @@ export default function HomePage() {
                   {keyword}
                 </Button>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section ref={featuresRef} className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="feature-card text-center group cursor-pointer">
+              <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Target className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">맞춤형 채용정보</h3>
+              <p className="text-muted-foreground">정신장애인을 위한 검증된 채용공고만을 선별하여 제공합니다</p>
+            </div>
+            <div className="feature-card text-center group cursor-pointer">
+              <div className="w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Shield className="h-8 w-8 text-green-600" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">안전한 근무환경</h3>
+              <p className="text-muted-foreground">장애친화적 기업문화를 가진 검증된 기업들의 공고를 우선 추천합니다</p>
+            </div>
+            <div className="feature-card text-center group cursor-pointer">
+              <div className="w-16 h-16 mx-auto mb-4 bg-purple-100 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="h-8 w-8 text-purple-600" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">커뮤니티 지원</h3>
+              <p className="text-muted-foreground">같은 고민을 가진 사람들과 정보를 공유하고 서로 응원합니다</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section ref={statsRef} className="py-16 bg-gradient-to-r from-primary/5 to-purple-600/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="stat-item">
+              <div className="text-4xl font-bold text-primary mb-2">1,234</div>
+              <div className="text-muted-foreground">등록된 채용공고</div>
+            </div>
+            <div className="stat-item">
+              <div className="text-4xl font-bold text-green-600 mb-2">567</div>
+              <div className="text-muted-foreground">검증된 기업</div>
+            </div>
+            <div className="stat-item">
+              <div className="text-4xl font-bold text-purple-600 mb-2">89%</div>
+              <div className="text-muted-foreground">취업 성공률</div>
+            </div>
+            <div className="stat-item">
+              <div className="text-4xl font-bold text-orange-600 mb-2">24/7</div>
+              <div className="text-muted-foreground">실시간 지원</div>
             </div>
           </div>
         </div>
@@ -312,7 +500,7 @@ export default function HomePage() {
                 </SelectContent>
               </Select>
 
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="hover:scale-105 transition-transform">
                 <Filter className="h-4 w-4 mr-1" />
                 상세 필터
               </Button>
@@ -336,7 +524,7 @@ export default function HomePage() {
       </section>
 
       {/* Job Listings */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main ref={jobsRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-4">
           {loading ? (
             <div className="text-center py-12" role="status" aria-live="polite">
@@ -354,8 +542,8 @@ export default function HomePage() {
               const daysLeft = getDaysUntilExpiry(job.expiresAt);
               
               return (
-                <Link key={job.id} href={`/jobs/${job.id}`} className="block">
-                  <Card className="p-6 hover:shadow-md transition-soft cursor-pointer hover:border-primary/20">
+                <Link key={job.id} href={`/jobs/${job.id}`} className="block job-card">
+                  <Card className="p-6 hover:shadow-xl hover:scale-[1.01] transition-all duration-300 cursor-pointer hover:border-primary/20">
                     <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-2">
@@ -378,7 +566,7 @@ export default function HomePage() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className={`ml-4 ${savingJobs.has(job.id) ? 'animate-save' : ''}`}
+                          className={`ml-4 hover:scale-110 transition-transform ${savingJobs.has(job.id) ? 'animate-pulse' : ''}`}
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -386,7 +574,7 @@ export default function HomePage() {
                           }}
                         >
                           <Bookmark 
-                            className={`h-5 w-5 ${savedJobs.has(job.id) ? 'fill-primary' : ''}`} 
+                            className={`h-5 w-5 transition-colors ${savedJobs.has(job.id) ? 'fill-primary text-primary' : ''}`} 
                           />
                         </Button>
                       </div>
@@ -412,7 +600,7 @@ export default function HomePage() {
 
                       {daysLeft !== null && daysLeft <= 7 && (
                         <div className="mt-3">
-                          <Badge variant="destructive" className="text-xs">
+                          <Badge variant="destructive" className="text-xs animate-pulse">
                             마감 {daysLeft === 0 ? '오늘' : `${daysLeft}일 전`}
                           </Badge>
                         </div>
@@ -422,7 +610,7 @@ export default function HomePage() {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="ml-4"
+                      className="ml-4 hover:scale-105 transition-transform"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -451,6 +639,7 @@ export default function HomePage() {
                 onClick={() => {
                   setCurrentPage(prev => Math.max(1, prev - 1));
                 }}
+                className="hover:scale-105 transition-transform"
               >
                 이전
               </Button>
@@ -474,6 +663,7 @@ export default function HomePage() {
                     variant={currentPage === pageNum ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setCurrentPage(pageNum)}
+                    className="hover:scale-105 transition-transform"
                   >
                     {pageNum}
                   </Button>
@@ -487,6 +677,7 @@ export default function HomePage() {
                     variant="outline"
                     size="sm"
                     onClick={() => setCurrentPage(totalPages)}
+                    className="hover:scale-105 transition-transform"
                   >
                     {totalPages}
                   </Button>
@@ -500,6 +691,7 @@ export default function HomePage() {
                 onClick={() => {
                   setCurrentPage(prev => Math.min(totalPages, prev + 1));
                 }}
+                className="hover:scale-105 transition-transform"
               >
                 다음
               </Button>
@@ -521,19 +713,19 @@ export default function HomePage() {
             <div>
               <h4 className="text-white font-semibold mb-3">서비스</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white">채용공고</a></li>
-                <li><a href="#" className="hover:text-white">기업정보</a></li>
-                <li><a href="#" className="hover:text-white">이력서 작성</a></li>
-                <li><a href="#" className="hover:text-white">커뮤니티</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">채용공고</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">기업정보</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">이력서 작성</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">커뮤니티</a></li>
               </ul>
             </div>
             <div>
               <h4 className="text-white font-semibold mb-3">고객지원</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white">자주 묻는 질문</a></li>
-                <li><a href="#" className="hover:text-white">문의하기</a></li>
-                <li><a href="#" className="hover:text-white">이용약관</a></li>
-                <li><a href="#" className="hover:text-white">개인정보처리방침</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">자주 묻는 질문</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">문의하기</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">이용약관</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">개인정보처리방침</a></li>
               </ul>
             </div>
             <div>

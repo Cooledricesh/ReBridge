@@ -3,6 +3,7 @@ import './globals.css';
 import Providers from './providers';
 import { Toaster } from 'sonner';
 import { Header } from '@/components/header';
+import ClientWrapper from '@/components/ClientWrapper';
 
 export const metadata: Metadata = {
   title: 'ReBridge - 정신장애인을 위한 채용 플랫폼',
@@ -43,10 +44,12 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <body className="antialiased">
-        <Providers>
-          <Header />
-          <main className="min-h-screen">{children}</main>
-        </Providers>
+        <ClientWrapper>
+          <Providers>
+            <Header />
+            <main className="min-h-screen">{children}</main>
+          </Providers>
+        </ClientWrapper>
         <Toaster position="bottom-right" richColors />
       </body>
     </html>
