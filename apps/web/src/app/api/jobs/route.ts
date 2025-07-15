@@ -10,16 +10,29 @@ export async function GET(request: Request) {
 
     const skip = (page - 1) * limit;
 
-    // Build where clause
+    // Build where clause - exclude expired jobs
+    const now = new Date();
+    const baseWhere = {
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gte: now } }
+      ]
+    };
+
     const where = search
       ? {
-          OR: [
-            { title: { contains: search, mode: 'insensitive' as const } },
-            { company: { contains: search, mode: 'insensitive' as const } },
-            { description: { contains: search, mode: 'insensitive' as const } },
-          ],
+          AND: [
+            baseWhere,
+            {
+              OR: [
+                { title: { contains: search, mode: 'insensitive' as const } },
+                { company: { contains: search, mode: 'insensitive' as const } },
+                { description: { contains: search, mode: 'insensitive' as const } },
+              ],
+            }
+          ]
         }
-      : {};
+      : baseWhere;
 
     // Get jobs and total count in parallel
     const [jobs, total] = await Promise.all([

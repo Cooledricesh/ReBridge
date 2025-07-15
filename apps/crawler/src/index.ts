@@ -96,6 +96,13 @@ async function scheduleCrawls() {
   // Schedule recurring crawls
   cron.schedule(CRAWL_CONFIG.CRON_SCHEDULE, async () => {
     console.log('Running scheduled crawl...');
+    
+    // Clean up expired jobs before new crawl
+    const deletedCount = await crawlerManager.cleanupExpiredJobs();
+    if (deletedCount > 0) {
+      console.log(`Cleaned up ${deletedCount} expired jobs before crawl`);
+    }
+    
     await crawlQueue.add('crawl-saramin', { source: 'saramin', page: 1 });
     await crawlQueue.add('crawl-work24', { source: 'work24', page: 1 });
     await crawlQueue.add('crawl-jobkorea', { source: 'jobkorea', page: 1 });

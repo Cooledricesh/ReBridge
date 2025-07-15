@@ -580,21 +580,27 @@ export default function HomePage() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mt-3">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          <span>{job.locationJson?.address || '위치 미정'}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-4 w-4" />
-                          <span className="font-medium">{formatSalary(job.salaryRange)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Building2 className="h-4 w-4" />
-                          <span>{job.employmentType || '고용형태 미정'}</span>
-                        </div>
+                        {job.locationJson?.address && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            <span>{job.locationJson.address}</span>
+                          </div>
+                        )}
+                        {job.salaryRange && (
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-4 w-4" />
+                            <span className="font-medium">{formatSalary(job.salaryRange)}</span>
+                          </div>
+                        )}
+                        {job.employmentType && (
+                          <div className="flex items-center gap-1">
+                            <Building2 className="h-4 w-4" />
+                            <span>{job.employmentType}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          <span>{formatDate(job.crawledAt)} 등록</span>
+                          <span>{formatDate(job.crawledAt)}</span>
                         </div>
                       </div>
 

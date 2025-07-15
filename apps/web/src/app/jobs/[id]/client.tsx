@@ -174,38 +174,39 @@ export default function JobDetailClient({ job, relatedJobs }: JobDetailClientPro
 
               <Separator className="my-4" />
 
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">고용형태</span>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{job.employmentType || '정보 없음'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">급여</span>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">
-                    {formatSalary(job.salaryRange)}
+              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                {job.employmentType && (
+                  <div className="flex items-center gap-2">
+                    <span>고용형태:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{job.employmentType}</span>
+                  </div>
+                )}
+                {job.salaryRange && (
+                  <div className="flex items-center gap-2">
+                    <span>급여:</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{formatSalary(job.salaryRange)}</span>
+                  </div>
+                )}
+                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    💡 더 자세한 정보는 아래 "지원하기" 버튼을 클릭하여 원본 채용공고에서 확인하세요.
                   </p>
-                </div>
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">경력</span>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{'무관'}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">학력</span>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{'무관'}</p>
                 </div>
               </div>
             </Card>
 
-            {/* Job Description */}
-            <Card className="p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100">
-                <FileText className="w-5 h-5" />
-                상세 내용
-              </h2>
-              <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
-                {job.description || '상세 정보가 없습니다.'}
-              </div>
-            </Card>
+            {/* Job Description - Only show if available */}
+            {job.description && (
+              <Card className="p-6">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                  <FileText className="w-5 h-5" />
+                  상세 내용
+                </h2>
+                <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
+                  {job.description}
+                </div>
+              </Card>
+            )}
 
             {/* Requirements */}
             {job.requirements && job.requirements.length > 0 && (

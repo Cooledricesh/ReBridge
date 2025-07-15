@@ -287,6 +287,48 @@ export class CrawlerManager {
     console.log('Crawler adapters cleaned up');
   }
 
+  // Clean up expired jobs
+  async cleanupExpiredJobs(): Promise<number> {
+    const now = new Date();
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    
+    try {
+      // Delete jobs that have expired OR are older than 3 months without expiry date
+      const result = await prisma.job.deleteMany({
+        where: {
+          OR: [
+            // Jobs with expiry date that has passed
+            {
+              expiresAt: {
+                lt: now
+              }
+            },
+            // Jobs without expiry date that are older than 3 months
+            {
+              AND: [
+                { expiresAt: null },
+                { crawledAt: { lt: threeMonthsAgo } }
+              ]
+            }
+          ]
+        }
+      });
+
+      if (result.count > 0) {
+        console.log(`Deleted ${result.count} expired/old jobs`);
+        
+        // Invalidate cache after cleanup
+        await this.updateCache();
+      }
+
+      return result.count;
+    } catch (error) {
+      console.error('Error cleaning up expired jobs:', error);
+      return 0;
+    }
+  }
+
   // Get crawl statistics
   async getStats(): Promise<{
     totalJobs: number;
