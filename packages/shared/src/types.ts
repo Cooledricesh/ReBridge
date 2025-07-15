@@ -63,6 +63,7 @@ export const NormalizedJobSchema = z.object({
   isDisabilityFriendly: z.boolean(),
   crawledAt: z.date(),
   expiresAt: z.date().nullable(),
+  externalUrl: z.string().nullable(),
   rawData: z.any(),
 });
 

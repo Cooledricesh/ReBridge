@@ -355,6 +355,7 @@ export class Work24Adapter extends BaseCrawlerAdapter {
       isDisabilityFriendly: true,
       crawledAt: new Date(),
       expiresAt: this.parseDeadline(data.deadline as string),
+      externalUrl: raw.url,
       rawData: raw
     };
   }

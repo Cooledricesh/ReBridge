@@ -32,6 +32,7 @@ model Job {
   isDisabilityFriendly   Boolean        @default(false) @map("is_disability_friendly")
   crawledAt              DateTime       @map("crawled_at")
   expiresAt              DateTime?      @map("expires_at")
+  externalUrl            String?        @map("external_url")
   rawData                Json?          @map("raw_data")
   searchVector           Unsupported("tsvector")? @map("search_vector")
   userSavedJobs          UserSavedJob[]

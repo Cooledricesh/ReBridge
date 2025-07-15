@@ -215,6 +215,7 @@ export class SaraminAdapter extends BaseCrawlerAdapter {
       isDisabilityFriendly: false, // Will be determined from detail
       crawledAt: new Date(),
       expiresAt: this.parseDeadline(data.deadline as string),
+      externalUrl: raw.url,
       rawData: raw
     };
   }

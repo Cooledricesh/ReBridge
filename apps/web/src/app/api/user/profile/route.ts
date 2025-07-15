@@ -164,5 +164,3 @@ export async function PATCH(req: Request) {
     );
   }
 }
-export const GET = withRateLimit(getProfileHandler, 'api');
-export const PATCH = withRateLimit(updateProfileHandler, 'profile');

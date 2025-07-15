@@ -120,6 +120,7 @@ export class CrawlerManager {
                 isDisabilityFriendly: normalized.isDisabilityFriendly,
                 crawledAt: normalized.crawledAt,
                 expiresAt: normalized.expiresAt,
+                externalUrl: normalized.externalUrl,
                 rawData: normalized.rawData,
               },
             });
@@ -139,6 +140,7 @@ export class CrawlerManager {
                 isDisabilityFriendly: normalized.isDisabilityFriendly,
                 crawledAt: normalized.crawledAt,
                 expiresAt: normalized.expiresAt,
+                externalUrl: normalized.externalUrl,
                 rawData: normalized.rawData,
               },
             });

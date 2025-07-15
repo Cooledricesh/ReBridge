@@ -212,6 +212,7 @@ export class JobKoreaAdapter extends BaseCrawlerAdapter {
       isDisabilityFriendly: this.checkDisabilityInTitle(data.title as string),
       crawledAt: new Date(),
       expiresAt: this.parseDeadline(data.deadline as string),
+      externalUrl: raw.url,
       rawData: raw
     };
   }
