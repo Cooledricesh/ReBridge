@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "worker:notification": "tsx src/workers/notification-worker.ts"
+    "worker:notification": "tsx src/workers/notification-worker.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@auth/core": "^0.40.0",
