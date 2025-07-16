@@ -86,45 +86,138 @@ export class Work24Adapter extends BaseCrawlerAdapter {
       const $ = cheerio.load(html);
 
       // Extract job listings - Work24 search result structure
-      // First try the checkbox method
-      const checkboxes = $('input[type="checkbox"][name="chkWantedAuthNo"]');
+      // First try the checkbox method - Work24 uses various checkbox names
+      const checkboxes = $('input[type="checkbox"][name="chkWantedAuthNo"], input[type="checkbox"][id^="chkboxWantedAuthNo"]');
       
       if (checkboxes.length > 0) {
         console.log(`Work24: Found ${checkboxes.length} job listings via checkboxes`);
         
         checkboxes.each((_, element) => {
           const $checkbox = $(element);
-          const externalId = $checkbox.val() as string;
+          const checkboxValue = $checkbox.val() as string;
           
-          if (externalId) {
+          if (checkboxValue) {
+            // Extract data from checkbox value: "ID|TYPE|COMPANY|TITLE"
+            const valueParts = checkboxValue.split('|');
+            const externalId = valueParts[0] || checkboxValue;
+            const checkboxTitle = valueParts[3] || '';
+            
             // Navigate up to find the job container
             const $jobSection = $checkbox.parent().parent().parent();
             
-            // Extract company name (첫 번째 줄에 있음)
+            // Extract company name
             const company = normalizeWhitespace($jobSection.find('.cp_name').text());
             
-            // Extract job title (회사명 다음 링크)
-            const titleLink = $jobSection.find('a').eq(1); // 첫 번째는 회사 링크, 두 번째가 채용공고 제목
-            const title = normalizeWhitespace(titleLink.text());
+            // Work24 specific title extraction
+            let title = '';
             
-            // Extract location and other details from list items
+            // First, try to use the title from checkbox value
+            if (checkboxTitle) {
+              title = normalizeWhitespace(checkboxTitle);
+            }
+            
+            // If no title from checkbox, try other methods
+            if (!title) {
+              // Method 1: Find title from onclick attributes
+              const $titleLink = $jobSection.find('a[onclick*="fn_view_emp_dtl"]').first();
+              if ($titleLink.length > 0) {
+                title = normalizeWhitespace($titleLink.text());
+              }
+            }
+            
+            // Method 2: Find links that are not company links
+            if (!title) {
+              $jobSection.find('a').each((_, link) => {
+                const $link = $(link);
+                const linkText = normalizeWhitespace($link.text());
+                
+                // Skip company links and empty links
+                if (!$link.hasClass('cp_name') && 
+                    !$link.find('.cp_name').length && 
+                    linkText && 
+                    linkText !== company &&
+                    linkText.length > 5 && // Skip short text like "상세"
+                    !linkText.includes('상세보기') &&
+                    !linkText.includes('스크랩')) {
+                  title = linkText;
+                  return false; // break
+                }
+              });
+            }
+            
+            // Debug logging - Always log for debugging
+            console.log(`Work24 Job ${externalId}:`, {
+              company: company,
+              title: title || 'NOT FOUND',
+              checkboxTitle: checkboxTitle,
+              titleSource: checkboxTitle ? 'checkbox' : (title ? 'extracted' : 'none')
+            });
+            
+            // Extract all details from list items
             let location = '';
             let salary = '';
             let deadline = '';
+            let employmentType = '';
+            let education = '';
+            let experience = '';
+            let position = '';
             
-            $jobSection.find('ul li').each((_, li) => {
-              const text = $(li).text();
-              if (text.includes('지역 :')) {
-                location = normalizeWhitespace(text.split(':')[1]);
-              } else if (text.includes('급여 :')) {
-                salary = normalizeWhitespace(text.split(':')[1]);
+            // Extract from structured data
+            const allText = $jobSection.text();
+            
+            // Try to extract from table rows or list items
+            $jobSection.find('tr, li').each((_, element) => {
+              const text = $(element).text();
+              
+              // Location
+              if (text.includes('지역 :') || text.includes('근무지역')) {
+                location = normalizeWhitespace(text.split(':').slice(1).join(':'));
+              }
+              // Salary
+              else if (text.includes('급여 :') || text.includes('임금')) {
+                salary = normalizeWhitespace(text.split(':').slice(1).join(':'));
+              }
+              // Employment type
+              else if (text.includes('고용형태') || text.includes('근무형태')) {
+                employmentType = normalizeWhitespace(text.split(':').slice(1).join(':'));
+              }
+              // Education
+              else if (text.includes('학력')) {
+                education = normalizeWhitespace(text.split(':').slice(1).join(':'));
+              }
+              // Experience
+              else if (text.includes('경력')) {
+                experience = normalizeWhitespace(text.split(':').slice(1).join(':'));
+              }
+              // Position/Job type
+              else if (text.includes('직종') || text.includes('모집직종')) {
+                position = normalizeWhitespace(text.split(':').slice(1).join(':'));
               }
             });
             
-            // Extract deadline from D-day badge
+            // Alternative extraction from text patterns
+            if (!employmentType) {
+              const empMatch = allText.match(/(?:고용형태|근무형태)\s*[:]?\s*([^\n]+)/);
+              if (empMatch) employmentType = normalizeWhitespace(empMatch[1]);
+            }
+            
+            if (!education) {
+              const eduMatch = allText.match(/(?:학력)\s*[:]?\s*([^\n]+)/);
+              if (eduMatch) education = normalizeWhitespace(eduMatch[1]);
+            }
+            
+            if (!experience) {
+              const expMatch = allText.match(/(?:경력)\s*[:]?\s*([^\n]+)/);
+              if (expMatch) experience = normalizeWhitespace(expMatch[1]);
+            }
+            
+            // Extract deadline from D-day badge or date pattern
             const ddayElement = $jobSection.find('[class*="d-"]');
             if (ddayElement.length > 0) {
               deadline = normalizeWhitespace(ddayElement.text());
+            } else {
+              const dateMatch = allText.match(/(\d{4}[-./]\d{2}[-./]\d{2})/);
+              if (dateMatch) deadline = dateMatch[1];
             }
 
             results.push({
@@ -137,6 +230,10 @@ export class Work24Adapter extends BaseCrawlerAdapter {
                 location,
                 salary,
                 deadline,
+                employmentType,
+                education,
+                experience,
+                position,
                 listingHtml: $jobSection.html() || ''
               }
             });
@@ -343,15 +440,56 @@ export class Work24Adapter extends BaseCrawlerAdapter {
   normalizeData(raw: RawJobData): NormalizedJob {
     const { data } = raw;
     
+    // If title is missing, try to construct from position or use company with position
+    let title = (data.title as string) || '';
+    if (!title && data.position) {
+      title = `${data.company} - ${data.position}`;
+    } else if (!title) {
+      title = `${data.company} 채용공고`;
+    }
+    
+    // Build description from extracted fields
+    const descriptionParts: string[] = [];
+    
+    if (data.position) {
+      descriptionParts.push(`모집직종: ${data.position}`);
+    }
+    
+    if (data.employmentType) {
+      descriptionParts.push(`고용형태: ${data.employmentType}`);
+    }
+    
+    if (data.education) {
+      descriptionParts.push(`학력요건: ${data.education}`);
+    }
+    
+    if (data.experience) {
+      descriptionParts.push(`경력요건: ${data.experience}`);
+    }
+    
+    if (data.salary) {
+      descriptionParts.push(`급여: ${data.salary}`);
+    }
+    
+    if (data.location) {
+      descriptionParts.push(`근무지역: ${data.location}`);
+    }
+    
+    if (data.deadline) {
+      descriptionParts.push(`마감일: ${data.deadline}`);
+    }
+    
+    const description = descriptionParts.length > 0 ? descriptionParts.join('\n') : null;
+    
     return {
       source: this.source,
       externalId: raw.externalId,
-      title: (data.title as string) || '',
+      title,
       company: (data.company as string) || null,
-      locationJson: data.location ? { address: data.location } : null,
-      salaryRange: null, // Will be parsed from detail
-      employmentType: null,
-      description: null,
+      locationJson: data.location ? { address: data.location as string } : null,
+      salaryRange: this.parseSalaryRange(data.salary as string),
+      employmentType: (data.employmentType as string) || null,
+      description,
       isDisabilityFriendly: true,
       crawledAt: new Date(),
       expiresAt: this.parseDeadline(data.deadline as string),
@@ -360,11 +498,6 @@ export class Work24Adapter extends BaseCrawlerAdapter {
     };
   }
 
-  private extractJobId(onclick: string): string {
-    // Extract job ID from onclick="fnJobDetail('12345')"
-    const match = onclick.match(/fnJobDetail\('(\d+)'\)/);
-    return match ? match[1] : '';
-  }
 
   private parseSalaryRange(salaryText?: string): { min?: number; max?: number; currency: string } | null {
     if (!salaryText) return null;
