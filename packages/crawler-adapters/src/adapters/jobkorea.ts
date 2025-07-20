@@ -11,6 +11,7 @@ import {
   parseKoreanCurrency
 } from '@rebridge/shared';
 import { BaseCrawlerAdapter } from '../base';
+import { getCrawlerKeywords } from '../utils/keywords';
 
 export class JobKoreaAdapter extends BaseCrawlerAdapter {
   source: JobSource = 'jobkorea';
@@ -34,9 +35,12 @@ export class JobKoreaAdapter extends BaseCrawlerAdapter {
       });
       const browserPage = await context.newPage();
 
+      // Get keywords from database
+      const keywords = await getCrawlerKeywords();
+      const searchKeyword = keywords[0] || '장애인'; // Use first keyword for search
+      
       // Navigate to job list page with disability-friendly filter
-      // Using search keyword "장애인" to filter disability-friendly jobs
-      const listUrl = `${this.baseUrl}/Search/?stext=%EC%9E%A5%EC%95%A0%EC%9D%B8&Page_No=${page}`;
+      const listUrl = `${this.baseUrl}/Search/?stext=${encodeURIComponent(searchKeyword)}&Page_No=${page}`;
       await browserPage.goto(listUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
       // Wait for content to load with increased timeout
@@ -171,7 +175,7 @@ export class JobKoreaAdapter extends BaseCrawlerAdapter {
         salaryRange: this.parseSalaryRange(details['급여'] || details['연봉']),
         employmentType: details['고용형태'] || details['근무형태'] || null,
         description,
-        isDisabilityFriendly: this.checkDisabilityFriendly($),
+        isDisabilityFriendly: await this.checkDisabilityFriendly($),
         crawledAt: new Date(),
         expiresAt: this.parseDeadline(details['모집마감일'] || details['접수마감'] || details['마감일']),
         requirements: this.parseRequirements($, details),
@@ -197,7 +201,7 @@ export class JobKoreaAdapter extends BaseCrawlerAdapter {
     }
   }
 
-  normalizeData(raw: RawJobData): NormalizedJob {
+  async normalizeData(raw: RawJobData): Promise<NormalizedJob> {
     const { data } = raw;
     
     return {
@@ -209,7 +213,7 @@ export class JobKoreaAdapter extends BaseCrawlerAdapter {
       salaryRange: null, // Will be parsed from detail
       employmentType: null,
       description: null,
-      isDisabilityFriendly: this.checkDisabilityInTitle(data.title as string),
+      isDisabilityFriendly: await this.checkDisabilityInTitle(data.title as string),
       crawledAt: new Date(),
       expiresAt: this.parseDeadline(data.deadline as string),
       externalUrl: raw.url,
@@ -229,15 +233,22 @@ export class JobKoreaAdapter extends BaseCrawlerAdapter {
     return '';
   }
 
-  private checkDisabilityFriendly($: cheerio.CheerioAPI): boolean {
+  private async checkDisabilityFriendly($: cheerio.CheerioAPI): Promise<boolean> {
     const fullText = $('body').text().toLowerCase();
-    const keywords = ['장애인', '장애우', '장애인채용', '장애인우대', '장애인전형'];
-    return keywords.some(keyword => fullText.includes(keyword));
+    const keywords = await getCrawlerKeywords();
+    const extendedKeywords = [...keywords];
+    
+    // Add common variations for each keyword
+    keywords.forEach(keyword => {
+      extendedKeywords.push(`${keyword}채용`, `${keyword}우대`, `${keyword}전형`);
+    });
+    
+    return extendedKeywords.some(keyword => fullText.toLowerCase().includes(keyword.toLowerCase()));
   }
 
-  private checkDisabilityInTitle(title: string): boolean {
-    const keywords = ['장애인', '장애우'];
-    return keywords.some(keyword => title.includes(keyword));
+  private async checkDisabilityInTitle(title: string): Promise<boolean> {
+    const keywords = await getCrawlerKeywords();
+    return keywords.some(keyword => title.toLowerCase().includes(keyword.toLowerCase()));
   }
 
   private parseSalaryRange(salaryText?: string): { min?: number; max?: number; currency: string } | null {

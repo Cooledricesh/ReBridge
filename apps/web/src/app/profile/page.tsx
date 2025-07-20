@@ -13,7 +13,10 @@ import {
   Mail,
   Shield,
   Save,
-  Loader2
+  Loader2,
+  Search,
+  Plus,
+  X
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -46,6 +49,8 @@ export default function ProfilePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [newKeyword, setNewKeyword] = useState('');
 
   const {
     register,
@@ -66,6 +71,7 @@ export default function ProfilePage() {
 
     if (status === 'authenticated' && session?.user) {
       fetchUserData();
+      fetchKeywords();
     }
   }, [status, session, router]);
 
@@ -81,6 +87,66 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Error fetching user data:', error);
       toast.error('프로필 정보를 불러오는데 실패했습니다.');
+    }
+  };
+
+  const fetchKeywords = async () => {
+    try {
+      const response = await fetch('/api/crawler/keywords');
+      if (!response.ok) throw new Error('Failed to fetch keywords');
+      
+      const data = await response.json();
+      setKeywords(data.keywords || ['장애인']);
+    } catch (error) {
+      console.error('Error fetching keywords:', error);
+      setKeywords(['장애인']);
+    }
+  };
+
+  const handleAddKeyword = async () => {
+    if (!newKeyword.trim()) return;
+    
+    const updatedKeywords = [...keywords, newKeyword.trim()];
+    
+    try {
+      const response = await fetch('/api/crawler/keywords', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ keywords: updatedKeywords }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update keywords');
+      
+      setKeywords(updatedKeywords);
+      setNewKeyword('');
+      toast.success('키워드가 추가되었습니다.');
+    } catch (error) {
+      console.error('Error adding keyword:', error);
+      toast.error('키워드 추가에 실패했습니다.');
+    }
+  };
+
+  const handleRemoveKeyword = async (keywordToRemove: string) => {
+    const updatedKeywords = keywords.filter(k => k !== keywordToRemove);
+    
+    try {
+      const response = await fetch('/api/crawler/keywords', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ keywords: updatedKeywords }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update keywords');
+      
+      setKeywords(updatedKeywords);
+      toast.success('키워드가 삭제되었습니다.');
+    } catch (error) {
+      console.error('Error removing keyword:', error);
+      toast.error('키워드 삭제에 실패했습니다.');
     }
   };
 
@@ -196,6 +262,67 @@ export default function ProfilePage() {
                 >
                   장애인 등록 여부
                 </Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* 크롤링 키워드 설정 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>크롤링 키워드 설정</CardTitle>
+              <CardDescription>
+                채용 정보를 검색할 때 사용할 키워드를 관리합니다.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>현재 키워드</Label>
+                <div className="flex flex-wrap gap-2">
+                  {keywords.map((keyword) => (
+                    <div
+                      key={keyword}
+                      className="flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-sm"
+                    >
+                      <span>{keyword}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveKeyword(keyword)}
+                        className="hover:text-red-500 transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newKeyword">새 키워드 추가</Label>
+                <div className="flex gap-2">
+                  <div className="flex-1 flex items-center gap-2">
+                    <Search className="h-4 w-4 text-gray-500" />
+                    <Input
+                      id="newKeyword"
+                      value={newKeyword}
+                      onChange={(e) => setNewKeyword(e.target.value)}
+                      placeholder="추가할 키워드를 입력하세요"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddKeyword();
+                        }
+                      }}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleAddKeyword}
+                    disabled={!newKeyword.trim()}
+                  >
+                    <Plus className="h-4 w-4" />
+                    추가
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

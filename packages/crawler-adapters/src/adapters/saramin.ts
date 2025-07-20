@@ -11,6 +11,7 @@ import {
   parseKoreanCurrency
 } from '@rebridge/shared';
 import { BaseCrawlerAdapter } from '../base';
+import { getCrawlerKeywords } from '../utils/keywords';
 
 export class SaraminAdapter extends BaseCrawlerAdapter {
   source: JobSource = 'saramin';
@@ -33,8 +34,12 @@ export class SaraminAdapter extends BaseCrawlerAdapter {
       });
       const browserPage = await context.newPage();
 
+      // Get keywords from database
+      const keywords = await getCrawlerKeywords();
+      const searchKeyword = keywords[0] || '장애인'; // Use first keyword for search
+      
       // Search for disability-friendly jobs
-      const searchUrl = `${this.baseUrl}/zf_user/search?search_area=main&search_done=y&search_optional_item=n&searchType=search&searchword=%EC%9E%A5%EC%95%A0%EC%9D%B8&recruitPage=${page}`;
+      const searchUrl = `${this.baseUrl}/zf_user/search?search_area=main&search_done=y&search_optional_item=n&searchType=search&searchword=${encodeURIComponent(searchKeyword)}&recruitPage=${page}`;
       await browserPage.goto(searchUrl, { waitUntil: 'networkidle', timeout: CRAWL_CONFIG.TIMEOUT.NAVIGATION });
       
       // Wait for job listings to load with multiple possible selectors
@@ -162,9 +167,17 @@ export class SaraminAdapter extends BaseCrawlerAdapter {
       const salaryText = normalizeWhitespace($('.jv_cont.jv_summary .col .cont:contains("급여")').text());
       
       // Check if disability-friendly
-      const isDisabilityFriendly = html.includes('장애인채용') || 
-                                   html.includes('장애인 채용') ||
-                                   html.includes('장애인우대');
+      const keywords = await getCrawlerKeywords();
+      const extendedKeywords: string[] = [];
+      
+      // Add common variations for each keyword
+      keywords.forEach(keyword => {
+        extendedKeywords.push(keyword, `${keyword}채용`, `${keyword} 채용`, `${keyword}우대`);
+      });
+      
+      const isDisabilityFriendly = extendedKeywords.some(keyword => 
+        html.toLowerCase().includes(keyword.toLowerCase())
+      );
 
       const jobDetail: JobDetail = {
         id: '',

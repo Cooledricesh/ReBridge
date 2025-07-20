@@ -11,6 +11,7 @@ import {
   parseKoreanCurrency
 } from '@rebridge/shared';
 import { BaseCrawlerAdapter } from '../base';
+import { getCrawlerKeywords } from '../utils/keywords';
 
 export class Work24Adapter extends BaseCrawlerAdapter {
   source: JobSource = 'work24';
@@ -34,9 +35,13 @@ export class Work24Adapter extends BaseCrawlerAdapter {
       });
       const browserPage = await context.newPage();
 
+      // Get keywords from database
+      const keywords = await getCrawlerKeywords();
+      const searchKeyword = keywords[0] || '장애인'; // Use first keyword for search
+      
       // Try GET request with query parameters
-      console.log('Work24: Navigating to search results with "장애인" keyword...');
-      const searchUrl = `${this.baseUrl}/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=${encodeURIComponent('장애인')}&searchType=1`;
+      console.log(`Work24: Navigating to search results with "${searchKeyword}" keyword...`);
+      const searchUrl = `${this.baseUrl}/wk/a/b/1200/retriveDtlEmpSrchList.do?srcKeyword=${encodeURIComponent(searchKeyword)}&searchType=1`;
       
       await browserPage.goto(searchUrl, {
         waitUntil: 'networkidle',

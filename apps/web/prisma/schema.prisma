@@ -67,3 +67,12 @@ model CrawlLog {
 
   @@map("crawl_logs")
 }
+
+model CrawlerConfig {
+  id          String   @id @default(cuid())
+  keywords    String[] @default(["장애인"])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("crawler_configs")
+}

@@ -88,7 +88,7 @@ export class CrawlerManager {
 
       for (const rawJob of rawJobs) {
         try {
-          const normalized = adapter.normalizeData(rawJob);
+          const normalized = await adapter.normalizeData(rawJob);
           
           // Ensure all required fields are present
           if (!normalized.source || !normalized.externalId || !normalized.title) {
