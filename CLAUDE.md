@@ -271,6 +271,36 @@ openssl rand -base64 32
 - Test Korean characters after code generation for proper encoding
 - Remote images allowed from all hostnames for Korean content
 
+## Git Push Authentication Issue
+
+### Problem
+Git push fails with error:
+```
+fatal: could not read Username for 'https://github.com': No such device or address
+```
+
+### Solution
+Even if GitHub CLI (`gh`) is already authenticated, Git needs to be configured to use GitHub CLI's credentials:
+
+```bash
+# Set GitHub CLI as Git's credential helper
+git config --global credential.helper "!gh auth git-credential"
+
+# Then push normally
+git push origin main
+```
+
+### Verification
+Check GitHub CLI authentication status:
+```bash
+gh auth status
+```
+
+If not authenticated, login first:
+```bash
+gh auth login
+```
+
 ## Additional Resources
 
 Reference the following documentation files for detailed guidance:
