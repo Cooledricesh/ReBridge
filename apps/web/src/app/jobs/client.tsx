@@ -86,6 +86,8 @@ export function JobsListClient({ initialJobs, totalCount, currentPage, searchPar
 
   const handlePageChange = (newPage: number) => {
     updateUrl({ page: newPage.toString() });
+    // 페이지 변경 후 상단으로 스크롤
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const getExpiryStatus = (expiresAt: Date | string | null) => {
