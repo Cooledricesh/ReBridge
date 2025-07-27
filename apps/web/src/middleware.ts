@@ -1,23 +1,35 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+// 성능을 위해 헤더를 미리 생성
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Credentials': 'true',
+};
+
 export function middleware(request: NextRequest) {
-  // Rate limit 헤더 전달
-  const response = NextResponse.next();
-  
-  // CORS 헤더 설정 (필요한 경우)
-  if (request.nextUrl.pathname.startsWith('/api/')) {
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  // OPTIONS 요청은 빠르게 처리
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, { 
+      status: 200,
+      headers: corsHeaders
+    });
   }
   
-  return response;
+  // API 경로만 처리
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const response = NextResponse.next();
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+    return response;
+  }
+  
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    '/api/:path*',
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: '/api/:path*',
 };
