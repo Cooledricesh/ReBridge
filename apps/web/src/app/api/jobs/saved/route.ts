@@ -20,30 +20,30 @@ export async function GET(req: Request) {
   try {
     // 총 개수 조회
     const totalCount = await prisma.userSavedJob.count({
-      where: { user_id: session.user.id }
+      where: { userId: session.user.id }
     })
 
     // 저장된 공고 목록 조회
     const savedJobs = await prisma.userSavedJob.findMany({
-      where: { user_id: session.user.id },
+      where: { userId: session.user.id },
       include: {
-        jobs: {
+        job: {
           select: {
             id: true,
             title: true,
             company: true,
-            location_json: true,
-            salary_range: true,
-            employment_type: true,
+            locationJson: true,
+            salaryRange: true,
+            employmentType: true,
             description: true,
-            is_disability_friendly: true,
+            isDisabilityFriendly: true,
             source: true,
-            crawled_at: true,
-            expires_at: true
+            crawledAt: true,
+            expiresAt: true
           }
         }
       },
-      orderBy: { saved_at: 'desc' },
+      orderBy: { savedAt: 'desc' },
       skip,
       take: limit
     })

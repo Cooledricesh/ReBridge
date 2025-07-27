@@ -40,7 +40,7 @@ export { getRedisClient as redis };
 export const redisHelpers = {
   async getJSON<T>(key: string): Promise<T | null> {
     try {
-      const client = redis();
+      const client = getRedisClient();
       const value = await client.get(key);
       return value ? JSON.parse(value) : null;
     } catch (error) {
@@ -51,7 +51,7 @@ export const redisHelpers = {
 
   async setJSON(key: string, value: any, ttl?: number): Promise<void> {
     try {
-      const client = redis();
+      const client = getRedisClient();
       const json = JSON.stringify(value);
       if (ttl) {
         await client.setex(key, ttl, json);
@@ -65,7 +65,7 @@ export const redisHelpers = {
 
   async invalidatePattern(pattern: string): Promise<void> {
     try {
-      const client = redis();
+      const client = getRedisClient();
       const keys = await client.keys(pattern);
       if (keys.length > 0) {
         await client.del(...keys);

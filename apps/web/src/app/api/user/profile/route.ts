@@ -23,11 +23,6 @@ export async function GET() {
         email: true,
         isRegisteredDisability: true,
         createdAt: true,
-        accounts: {
-          select: {
-            provider: true
-          }
-        }
       }
     });
 
@@ -38,12 +33,9 @@ export async function GET() {
       );
     }
 
-    // OAuth 로그인 여부 확인
-    const provider = user.accounts.length > 0 ? user.accounts[0].provider : 'credentials';
-
     return NextResponse.json({
       ...user,
-      provider,
+      provider: 'credentials', // Always credentials since no OAuth in schema
       name: session.user.name || '',
     });
   } catch (error) {

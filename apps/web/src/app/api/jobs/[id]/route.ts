@@ -20,15 +20,10 @@ export async function GET(
         salaryRange: true,
         employmentType: true,
         isDisabilityFriendly: true,
-        requiredExperience: true,
-        requiredEducation: true,
-        benefits: true,
-        requirements: true,
-        preferredQualifications: true,
         crawledAt: true,
         expiresAt: true,
-        applyUrl: true,
-        contactInfo: true,
+        externalUrl: true,
+        rawData: true,
       },
     });
 

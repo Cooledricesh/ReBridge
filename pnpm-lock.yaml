@@ -275,6 +275,9 @@ importers:
 
   packages/crawler-adapters:
     dependencies:
+      '@rebridge/database':
+        specifier: workspace:*
+        version: link:../database
       '@rebridge/shared':
         specifier: workspace:*
         version: link:../shared

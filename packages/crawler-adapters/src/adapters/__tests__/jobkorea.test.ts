@@ -14,7 +14,7 @@ describe('JobKoreaAdapter', () => {
   });
 
   describe('normalizeData', () => {
-    it('should normalize raw job data correctly', () => {
+    it('should normalize raw job data correctly', async () => {
       const rawData = {
         source: 'jobkorea' as const,
         externalId: '12345678',
@@ -28,7 +28,7 @@ describe('JobKoreaAdapter', () => {
         }
       };
 
-      const normalized = adapter.normalizeData(rawData);
+      const normalized = await adapter.normalizeData(rawData);
 
       expect(normalized.source).toBe('jobkorea');
       expect(normalized.externalId).toBe('12345678');
@@ -39,14 +39,14 @@ describe('JobKoreaAdapter', () => {
       expect(normalized.rawData).toEqual(rawData);
     });
 
-    it('should detect disability-friendly by title keywords', () => {
+    it('should detect disability-friendly by title keywords', async () => {
       const testCases = [
         { title: '장애인 우대 채용', expected: true },
         { title: '장애우 환영', expected: true },
         { title: '일반 사무직 모집', expected: false }
       ];
 
-      testCases.forEach(({ title, expected }) => {
+      for (const { title, expected } of testCases) {
         const rawData = {
           source: 'jobkorea' as const,
           externalId: '12345',
@@ -54,9 +54,9 @@ describe('JobKoreaAdapter', () => {
           data: { title, listingHtml: '' }
         };
 
-        const normalized = adapter.normalizeData(rawData);
+        const normalized = await adapter.normalizeData(rawData);
         expect(normalized.isDisabilityFriendly).toBe(expected);
-      });
+      }
     });
   });
 

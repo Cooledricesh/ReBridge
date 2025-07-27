@@ -34,9 +34,9 @@ export async function POST(
     // 이미 저장했는지 확인
     const existingSave = await prisma.userSavedJob.findUnique({
       where: {
-        user_id_job_id: {
-          user_id: session.user.id,
-          job_id: jobId
+        userId_jobId: {
+          userId: session.user.id,
+          jobId: jobId
         }
       }
     })
@@ -51,11 +51,11 @@ export async function POST(
     // 저장
     const savedJob = await prisma.userSavedJob.create({
       data: {
-        user_id: session.user.id,
-        job_id: jobId
+        userId: session.user.id,
+        jobId: jobId
       },
       include: {
-        jobs: true
+        job: true
       }
     })
 

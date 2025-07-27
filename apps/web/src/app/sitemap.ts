@@ -37,17 +37,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const jobs = await prisma.job.findMany({
       select: {
         id: true,
-        updatedAt: true,
+        crawledAt: true,
       },
       orderBy: {
-        updatedAt: 'desc',
+        crawledAt: 'desc',
       },
       take: 1000, // Limit to most recent 1000 jobs
     });
 
     const jobPages = jobs.map((job) => ({
       url: `${baseUrl}/jobs/${job.id}`,
-      lastModified: job.updatedAt,
+      lastModified: job.crawledAt,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     }));

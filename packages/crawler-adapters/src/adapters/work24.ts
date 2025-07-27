@@ -309,6 +309,12 @@ export class Work24Adapter extends BaseCrawlerAdapter {
     } catch (error) {
       console.error('Work24 crawl error:', error);
       throw error;
+    } finally {
+      // Clean up browser to prevent memory leak
+      if (this.browser) {
+        await this.browser.close();
+        this.browser = null;
+      }
     }
 
     return results;
@@ -439,6 +445,12 @@ export class Work24Adapter extends BaseCrawlerAdapter {
     } catch (error) {
       console.error('Work24 parseJobDetail error:', error);
       throw error;
+    } finally {
+      // Clean up browser to prevent memory leak
+      if (this.browser) {
+        await this.browser.close();
+        this.browser = null;
+      }
     }
   }
 

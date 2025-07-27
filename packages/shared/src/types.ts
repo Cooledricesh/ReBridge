@@ -68,3 +68,17 @@ export const NormalizedJobSchema = z.object({
 });
 
 export type NormalizedJob = z.infer<typeof NormalizedJobSchema>;
+
+export interface EmailNotification {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}
+
+export interface NotificationJob {
+  type: 'job_expiring' | 'job_updated' | 'new_job_match' | 'email' | 'sms' | 'push';
+  data: any;
+  userId: string;
+  jobId?: string;
+}

@@ -91,6 +91,12 @@ export class JobKoreaAdapter extends BaseCrawlerAdapter {
     } catch (error) {
       console.error('JobKorea crawl error:', error);
       throw error;
+    } finally {
+      // Clean up browser to prevent memory leak
+      if (this.browser) {
+        await this.browser.close();
+        this.browser = null;
+      }
     }
 
     return results;
@@ -198,6 +204,12 @@ export class JobKoreaAdapter extends BaseCrawlerAdapter {
     } catch (error) {
       console.error('JobKorea parseJobDetail error:', error);
       throw error;
+    } finally {
+      // Clean up browser to prevent memory leak
+      if (this.browser) {
+        await this.browser.close();
+        this.browser = null;
+      }
     }
   }
 

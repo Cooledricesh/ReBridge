@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@rebridge/shared": "workspace:*",
-    "@prisma/client": "^5.22.0",
+    "@rebridge/database": "workspace:*",
     "puppeteer": "^23.0.0",
     "playwright": "^1.40.0",
     "cheerio": "^1.0.0-rc.12",

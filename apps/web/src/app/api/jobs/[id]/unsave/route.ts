@@ -22,9 +22,9 @@ export async function DELETE(
     // 저장된 공고인지 확인
     const savedJob = await prisma.userSavedJob.findUnique({
       where: {
-        user_id_job_id: {
-          user_id: session.user.id,
-          job_id: jobId
+        userId_jobId: {
+          userId: session.user.id,
+          jobId: jobId
         }
       }
     })
@@ -39,9 +39,9 @@ export async function DELETE(
     // 저장 해제
     await prisma.userSavedJob.delete({
       where: {
-        user_id_job_id: {
-          user_id: session.user.id,
-          job_id: jobId
+        userId_jobId: {
+          userId: session.user.id,
+          jobId: jobId
         }
       }
     })

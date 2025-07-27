@@ -2,7 +2,7 @@
 
 import 'dotenv/config';
 import { notificationWorker } from '@/lib/notifications/queue';
-import { startNotificationSchedulers } from '@/lib/notifications/scheduler';
+// import { startNotificationSchedulers } from '@/lib/notifications/scheduler';
 
 console.log('🔔 Starting notification worker...');
 
@@ -10,7 +10,7 @@ console.log('🔔 Starting notification worker...');
 notificationWorker.run();
 
 // 스케줄러 시작
-startNotificationSchedulers();
+// startNotificationSchedulers();
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {

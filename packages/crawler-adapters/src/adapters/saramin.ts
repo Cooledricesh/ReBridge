@@ -96,6 +96,12 @@ export class SaraminAdapter extends BaseCrawlerAdapter {
     } catch (error) {
       console.error('Saramin crawl error:', error);
       throw error;
+    } finally {
+      // Clean up browser to prevent memory leak
+      if (this.browser) {
+        await this.browser.close();
+        this.browser = null;
+      }
     }
 
     return results;
@@ -210,6 +216,12 @@ export class SaraminAdapter extends BaseCrawlerAdapter {
     } catch (error) {
       console.error('Saramin parseJobDetail error:', error);
       throw error;
+    } finally {
+      // Clean up browser to prevent memory leak
+      if (this.browser) {
+        await this.browser.close();
+        this.browser = null;
+      }
     }
   }
 
